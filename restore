@@ -1,34 +1,25 @@
 @echo off
-title 🔄 NOARNEVERDIE - BOOST RESET
+title 🔄 NOAR ULTRA BOOST
 color 0c
-mode con: cols=80 lines=20
+mode con: cols=110 lines=40
 
-echo --------------------------------------
-echo 🛠️ คืนค่าระบบกลับสู่ค่าเดิมเรียบร้อยแล้ว
-echo --------------------------------------
 timeout /t 1 >nul
 
-:: เปิด service ที่ปิดไป
+:: เปิดบริการคืน
 for %%S in (
-    "DiagTrack"
-    "SysMain"
-    "WSearch"
-    "Fax"
-    "Spooler"
-    "RetailDemo"
+    DiagTrack
+    SysMain
+    WSearch
+    Fax
+    Spooler
+    RetailDemo
 ) do (
+    echo 🔄 เปิดบริการ %%S ...
     sc config %%S start= auto >nul
-    sc start %%S >nul
+    net start %%S >nul 2>&1
 )
 
-:: เปิด Windows Update
-sc config wuauserv start= auto >nul
-net start wuauserv >nul
-
-:: เปิด Defender Realtime
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /f >nul
-
-:: คืนค่า Registry ที่ปรับไป
+:: รีเซ็ต registry ที่แก้ไว้
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CsEnabled /t REG_DWORD /d 1 /f >nul
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul
@@ -38,18 +29,17 @@ reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d 20000 
 reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d 5000 /f >nul
 reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d 0 /f >nul
 
-:: Power plan เป็น Balanced
+:: เปิด Windows Update
+sc config wuauserv start= auto >nul
+net start wuauserv >nul 2>&1
+
+:: เปิด Windows Defender Real-time Monitoring
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 0 /f >nul
+
+:: ตั้ง Power Plan กลับเป็น Balanced
 powercfg /setactive SCHEME_BALANCED >nul
 
-:: รีเซ็ต network settings กลับมาตั้งต้น
-netsh int tcp set global autotuninglevel=normal >nul
-netsh int tcp set global chimney=disabled >nul
-netsh int tcp set global dca=disabled >nul
-netsh int tcp set global ecncapability=disabled >nul
-netsh winsock reset catalog >nul
-ipconfig /flushdns >nul
-
 echo.
-echo ✅ คืนค่าระบบเสร็จแล้วนะจ๊ะ เดียร์
-timeout /t 2 >nul
+echo ✅ คืนค่าทุกอย่างเรียบร้อย!  
+timeout /t 3 >nul
 exit
