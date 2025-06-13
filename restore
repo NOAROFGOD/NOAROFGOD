@@ -1,0 +1,55 @@
+@echo off
+title 🔄 NOARNEVERDIE - BOOST RESET
+color 0c
+mode con: cols=80 lines=20
+
+echo --------------------------------------
+echo 🛠️ คืนค่าระบบกลับสู่ค่าเดิมเรียบร้อยแล้ว
+echo --------------------------------------
+timeout /t 1 >nul
+
+:: เปิด service ที่ปิดไป
+for %%S in (
+    "DiagTrack"
+    "SysMain"
+    "WSearch"
+    "Fax"
+    "Spooler"
+    "RetailDemo"
+) do (
+    sc config %%S start= auto >nul
+    sc start %%S >nul
+)
+
+:: เปิด Windows Update
+sc config wuauserv start= auto >nul
+net start wuauserv >nul
+
+:: เปิด Defender Realtime
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /f >nul
+
+:: คืนค่า Registry ที่ปรับไป
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CsEnabled /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul
+
+reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 400 /f >nul
+reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d 20000 /f >nul
+reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d 5000 /f >nul
+reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d 0 /f >nul
+
+:: Power plan เป็น Balanced
+powercfg /setactive SCHEME_BALANCED >nul
+
+:: รีเซ็ต network settings กลับมาตั้งต้น
+netsh int tcp set global autotuninglevel=normal >nul
+netsh int tcp set global chimney=disabled >nul
+netsh int tcp set global dca=disabled >nul
+netsh int tcp set global ecncapability=disabled >nul
+netsh winsock reset catalog >nul
+ipconfig /flushdns >nul
+
+echo.
+echo ✅ คืนค่าระบบเสร็จแล้วนะจ๊ะ เดียร์
+timeout /t 2 >nul
+exit
