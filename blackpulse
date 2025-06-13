@@ -1,23 +1,95 @@
 @echo off
-cls
+title 🚀 NOARNEVERDIE - FPS/Latency Cleaner V3
+color 0a
+mode con: cols=110 lines=40
 
-:: ล้าง Temp
-del /s /f /q %temp%\*
-del /s /f /q C:\Windows\Temp\*
+echo =====================================
+echo 🧨 NOARNEVERDIE ULTIMATE SYSTEM BOOST
+echo =====================================
+timeout /t 1 >nul
 
-:: ล้าง Prefetch
-del /s /f /q C:\Windows\Prefetch\*
+:: 📁 ล้างขยะทุกตระกูล + deep clean
+echo 🧹 Cleaning Temp / Prefetch / Cache...
+del /f /s /q %temp%\* >nul 2>&1
+del /f /s /q C:\Windows\Temp\* >nul 2>&1
+del /f /s /q C:\Windows\Prefetch\* >nul 2>&1
+del /f /s /q %SystemRoot%\System32\FNTCACHE.DAT >nul 2>&1
+del /f /s /q "%LocalAppData%\Microsoft\Windows\Explorer\thumbcache_*.db" >nul 2>&1
+cleanmgr /sagerun:1
 
-:: ล้าง Recycle Bin แบบเงียบ
-powershell -command "Clear-RecycleBin -Force" >nul 2>&1
+:: 🧠 ลด Input Lag โดยการปรับระบบ scheduling
+echo ⚡ Reducing Input Lag (Scheduler + Power + GPU tweak)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 26 /f >nul
+bcdedit /set useplatformtick yes >nul
+bcdedit /set disabledynamictick yes >nul
+bcdedit /set tscsyncpolicy Enhanced >nul
 
-:: ล้าง Windows Update cache
-net stop wuauserv >nul 2>&1
-del /s /f /q C:\Windows\SoftwareDistribution\Download\* >nul 2>&1
-net start wuauserv >nul 2>&1
+:: 🧠 เพิ่มประสิทธิภาพ interrupt CPU
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v LargeSystemCache /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul
 
-:: ล้าง recent file
-del /s /f /q "%APPDATA%\Microsoft\Windows\Recent\*" >nul 2>&1
+:: 🌐 ลด Packet Loss / Ping spike
+echo 🌐 Killing Packet Loss & Ping Spike...
+netsh int tcp set global rss=enabled >nul
+netsh int tcp set global chimney=enabled >nul
+netsh int tcp set global autotuninglevel=highlyrestricted >nul
+netsh interface ipv4 set subinterface "Wi-Fi" mtu=1500 store=persistent >nul 2>&1
+netsh int ip reset >nul
+netsh winsock reset >nul
+ipconfig /flushdns >nul
 
+:: 💻 ปิดการ Sync, Background, Windows Update, Tips
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v GlobalUserDisabled /t REG_DWORD /d 1 /f >nul
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338389Enabled /t REG_DWORD /d 0 /f >nul
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-310093Enabled /t REG_DWORD /d 0 /f >nul
+sc stop wuauserv >nul 2>&1
+sc config wuauserv start= disabled >nul
+
+:: ⚙️ ปิด Services + Defender ชั่วคราว
+echo 🔧 Disabling Useless Services & Defender...
+for %%S in (
+    "DiagTrack"
+    "SysMain"
+    "WSearch"
+    "Fax"
+    "Spooler"
+    "RetailDemo"
+) do (
+    sc stop %%S >nul 2>&1
+    sc config %%S start= disabled >nul
+)
+
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul
+
+:: 🧠 ยิง REG จูนระบบ
+echo 📊 Applying Deep Registry Optimization...
+> "%temp%\noar_boost_v3.reg" (
+    echo Windows Registry Editor Version 5.00
+    echo.
+    echo [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power]
+    echo "CsEnabled"=dword:00000000
+    echo.
+    echo [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile]
+    echo "SystemResponsiveness"=dword:00000000
+    echo "NetworkThrottlingIndex"=dword:ffffffff
+    echo.
+    echo [HKEY_CURRENT_USER\Control Panel\Desktop]
+    echo "MenuShowDelay"="0"
+    echo "WaitToKillAppTimeout"="1000"
+    echo "HungAppTimeout"="1000"
+    echo "AutoEndTasks"="1"
+)
+regedit /s "%temp%\noar_boost_v3.reg"
+del "%temp%\noar_boost_v3.reg"
+
+:: ⚡ เปิด High Performance Mode
+powercfg /setactive SCHEME_MIN
+
+:: 💅 เคลียร์ Shell Icon Cache
+ie4uinit.exe -ClearIconCache >nul
+
+echo.
+echo ✅ ลั่นสำเร็จ! ระบบเดือดเรียบร้อยแล้วจ้าา
+timeout /t 2 >nul
 exit
-
