@@ -1,32 +1,32 @@
 @echo off
+title NOAR ULTRA BOOST
 color 0a
 mode con: cols=110 lines=40
 
+echo 🧹 ล้างขยะ Temp / Prefetch / Cache...
 timeout /t 1 >nul
-
-:: 📁 ล้างขยะทุกตระกูล + deep clean
-echo 🧹 Cleaning Temp / Prefetch / Cache...
 del /f /s /q %temp%\* >nul 2>&1
 del /f /s /q C:\Windows\Temp\* >nul 2>&1
 del /f /s /q C:\Windows\Prefetch\* >nul 2>&1
 del /f /s /q %SystemRoot%\System32\FNTCACHE.DAT >nul 2>&1
 del /f /s /q "%LocalAppData%\Microsoft\Windows\Explorer\thumbcache_*.db" >nul 2>&1
-cleanmgr /sagerun:1
+cleanmgr /sagerun:1 >nul
 
-:: 🧠 ลด Input Lag โดยการปรับระบบ scheduling
-echo ⚡ Reducing Input Lag (Scheduler + Power + GPU tweak)...
+echo.
+echo ⚡ ลด Input Lag (Scheduler + Power + GPU tweak)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 26 /f >nul
 bcdedit /set useplatformtick yes >nul
 bcdedit /set disabledynamictick yes >nul
 bcdedit /set tscsyncpolicy Enhanced >nul
 
-:: 🧠 เพิ่มประสิทธิภาพ interrupt CPU
+echo.
+echo 🧠 เพิ่มประสิทธิภาพ interrupt CPU...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v LargeSystemCache /t REG_DWORD /d 1 /f >nul
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul
 
-:: 🌐 ลด Packet Loss / Ping spike
-echo 🌐 Killing Packet Loss & Ping Spike...
+echo.
+echo 🌐 ลด Packet Loss & Ping Spike...
 netsh int tcp set global rss=enabled >nul
 netsh int tcp set global chimney=enabled >nul
 netsh int tcp set global autotuninglevel=highlyrestricted >nul
@@ -35,31 +35,33 @@ netsh int ip reset >nul
 netsh winsock reset >nul
 ipconfig /flushdns >nul
 
-:: 💻 ปิดการ Sync, Background, Windows Update, Tips
+echo.
+echo 💻 ปิดการ Sync, Background, Windows Update, Tips...
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v GlobalUserDisabled /t REG_DWORD /d 1 /f >nul
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338389Enabled /t REG_DWORD /d 0 /f >nul
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-310093Enabled /t REG_DWORD /d 0 /f >nul
 sc stop wuauserv >nul 2>&1
 sc config wuauserv start= disabled >nul
 
-:: ⚙️ ปิด Services + Defender ชั่วคราว
-echo 🔧 Disabling Useless Services & Defender...
+echo.
+echo 🔧 ปิด Services + Defender ชั่วคราว...
 for %%S in (
-    "DiagTrack"
-    "SysMain"
-    "WSearch"
-    "Fax"
-    "Spooler"
-    "RetailDemo"
+    DiagTrack
+    SysMain
+    WSearch
+    Fax
+    Spooler
+    RetailDemo
 ) do (
+    echo 🔥 ปิดบริการ %%S ...
     sc stop %%S >nul 2>&1
     sc config %%S start= disabled >nul
 )
 
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul
 
-:: 🧠 ยิง REG จูนระบบ
-echo 📊 Applying Deep Registry Optimization...
+echo.
+echo 📊 ยิง REG จูนระบบ...
 > "%temp%\noar_boost_v3.reg" (
     echo Windows Registry Editor Version 5.00
     echo.
@@ -79,13 +81,15 @@ echo 📊 Applying Deep Registry Optimization...
 regedit /s "%temp%\noar_boost_v3.reg"
 del "%temp%\noar_boost_v3.reg"
 
-:: ⚡ เปิด High Performance Mode
-powercfg /setactive SCHEME_MIN
+echo.
+echo ⚡ เปิด High Performance Power Plan...
+powercfg /setactive SCHEME_MIN >nul
 
-:: 💅 เคลียร์ Shell Icon Cache
+echo.
+echo 💅 เคลียร์ Shell Icon Cache...
 ie4uinit.exe -ClearIconCache >nul
 
 echo.
 echo ✅ ลั่นสำเร็จ! ระบบเดือดเรียบร้อยแล้วจ้าา
-timeout /t 2 >nul
+timeout /t 3 >nul
 exit
