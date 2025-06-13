@@ -1,11 +1,7 @@
 @echo off
-title 🚀 NOARNEVERDIE - FPS/Latency Cleaner V3
 color 0a
 mode con: cols=110 lines=40
 
-echo =====================================
-echo 🧨 NOARNEVERDIE ULTIMATE SYSTEM BOOST
-echo =====================================
 timeout /t 1 >nul
 
 :: 📁 ล้างขยะทุกตระกูล + deep clean
