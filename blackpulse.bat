@@ -1,5 +1,12 @@
 mode con: cols=100 lines=35
 
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Requesting administrative privileges...
+    powershell -Command "Start-Process '%~f0' -Verb runAs"
+    exit /b
+)
+
 netsh int tcp set global autotuninglevel=normal
 
 netsh int tcp set global fastopen=enabled
