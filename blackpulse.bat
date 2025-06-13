@@ -1,52 +1,53 @@
 mode con: cols=100 lines=35
 
+sc stop "SysMain" >nul 2>&1
+sc config "SysMain" start=disabled
 
-for %%S in (SysMain WSearch DiagTrack RetailDemo Fax Spooler) do (
-    sc stop %%S >nul 2>&1
-    sc config %%S start= disabled >nul
-)
+sc stop "WSearch" >nul 2>&1
+sc config "WSearch" start=disabled
 
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul
+sc stop "DiagTrack" >nul 2>&1
+sc config "DiagTrack" start=disabled
 
+sc stop "Fax" >nul 2>&1
+sc config "Fax" start=disabled
 
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f
+sc stop "Spooler" >nul 2>&1
+sc config "Spooler" start=disabled
 
-:: ⏱ SystemResponsiveness - ลดดีเลย์ของ Service background
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 0 /f
+del /f /s /q %temp%\* >nul 2>&1
+del /f /s /q C:\Windows\Temp\* >nul 2>&1
+del /f /s /q C:\Windows\Prefetch\* >nul 2>&1
 
-:: ⚡ TCP Ack - ส่งข้อมูลทันทีไม่รอรวบ
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f
+del /f /s /q %localappdata%\Microsoft\Windows\Explorer\thumbcache_*.db >nul 2>&1
 
-:: 📦 เพิ่ม MTU ให้การส่งข้อมูลเต็มแพ็กเกจ
-netsh interface ipv4 set subinterface "Wi-Fi" mtu=1500 store=persistent >nul 2>&1
-netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent >nul 2>&1
+netsh int tcp set global autotuninglevel=normal
 
-:: 💥 Disable Nagle Algorithm แบบ HardCore
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{default}" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{default}" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
+netsh int tcp set global fastopen=enabled
 
-:: (อยากให้เดียร์ระบุชื่อ interface จริงๆ พี่จะจัดให้แบบแม่นกว่า)
+netsh int ipv4 set dynamicport tcp start=1024 num=65535
+netsh int ipv4 set dynamicport udp start=1024 num=65535
 
-:: 📶 Enable RSS, Auto Tuning, etc.
-netsh int tcp set global rss=enabled >nul
-netsh int tcp set global autotuninglevel=highlyrestricted >nul
-netsh int tcp set global chimney=enabled >nul
-netsh int tcp set global ecncapability=disabled >nul
-netsh int tcp set heuristics disabled >nul
+netsh interface tcp set global rss=enabled
+netsh int tcp set global chimney=enabled
+netsh int tcp set global autotuninglevel=normal
+netsh int tcp set global congestionprovider=ctcp
 
-:: 🔄 รีค่า IP/DNS/Winsock
-ipconfig /flushdns >nul
-netsh winsock reset >nul
-netsh int ip reset >nul
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /t REG_DWORD /d 64240 /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v GlobalMaxTcpWindowSize /t REG_DWORD /d 64240 /f
 
-:: 🌐 QoS - ปิด Limit
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f
+netsh int tcp set global rss=enabled
 
-:: 🛑 ปิด Auto Proxy ที่บางทีกินเน็ต
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoDetect /t REG_DWORD /d 0 /f
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f
+netsh int tcp set global chimney=enabled
 
-echo ✅ HACKED
-timeout /t 3 >nul
-exit
+netsh int tcp set global netdma=enabled
+
+netsh int tcp set global ecncapability=enabled
+
+netsh interface tcp set global congestionprovider=ctcp
+
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v KeepAliveTime /t REG_DWORD /d 30000 /f
+
+ipconfig /flushdns
+
+netsh int ip reset
