@@ -1,17 +1,3 @@
-sc config "SysMain" start=auto
-sc start "SysMain"
-
-sc config "WSearch" start=auto
-sc start "WSearch"
-
-sc config "DiagTrack" start=auto
-sc start "DiagTrack"
-
-sc config "Fax" start=manual
-sc start "Fax"
-
-sc config "Spooler" start=auto
-sc start "Spooler"
 
 :: รีเซ็ต TCP/IP stack คืนค่า network settings
 netsh int ip reset
