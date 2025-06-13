@@ -1,42 +1,38 @@
+sc config "SysMain" start=auto
+sc start "SysMain"
 
-:: เปิด Services ที่เคยปิดกลับ
-for %%S in (SysMain WSearch DiagTrack RetailDemo Fax Spooler) do (
-    sc config %%S start= delayed-auto >nul
-    sc start %%S >nul 2>&1
-)
+sc config "WSearch" start=auto
+sc start "WSearch"
 
-:: เปิด Realtime Defender กลับ
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /f >nul 2>&1
+sc config "DiagTrack" start=auto
+sc start "DiagTrack"
 
-:: คืนค่า Multimedia SystemProfile
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /f >nul 2>&1
+sc config "Fax" start=manual
+sc start "Fax"
 
-:: คืนค่า TCP settings
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /f >nul 2>&1
+sc config "Spooler" start=auto
+sc start "Spooler"
 
-:: ถ้าเคยยิงใส่ Interface แบบ {default} (อันนี้ควรปรับให้ใช้ Interface จริง)
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{default}" /v TcpAckFrequency /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{default}" /v TCPNoDelay /f >nul 2>&1
+:: รีเซ็ต TCP/IP stack คืนค่า network settings
+netsh int ip reset
 
-:: QoS Default
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /f >nul 2>&1
+:: รีเซ็ต TCP global parameters เป็น default
+netsh int tcp set global autotuninglevel=normal
+netsh int tcp set global fastopen=disabled
+netsh int tcp set global rss=disabled
+netsh int tcp set global chimney=disabled
+netsh int tcp set global netdma=disabled
+netsh int tcp set global ecncapability=disabled
+netsh int tcp set global congestionprovider=none
 
-:: Auto Proxy Settings
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoDetect /f >nul 2>&1
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /f >nul 2>&1
+:: รีเซ็ต dynamic port range เป็น default
+netsh int ipv4 reset dynamicport tcp
+netsh int ipv4 reset dynamicport udp
 
-:: ค่า TCP/IP กลับ default
-netsh int tcp reset >nul
-netsh winsock reset >nul
-netsh int ip reset >nul
+:: ลบค่า registry ที่ตั้งเอง (ตั้งค่า 0 คือปิด หรือ ลบค่า)
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v GlobalMaxTcpWindowSize /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v KeepAliveTime /f
 
-:: MTU Default (ไม่บังคับ แค่ปรับคืนแบบทั่วไป)
-netsh interface ipv4 set subinterface "Wi-Fi" mtu=1400 store=persistent >nul 2>&1
-netsh interface ipv4 set subinterface "Ethernet" mtu=1400 store=persistent >nul 2>&1
-
-echo.
-echo ✅ คืนค่าทุกอย่างเรียบร้อย คอมกลับสู่สมดุล~ 🍃
-timeout /t 3 >nul
-exit
+:: ล้าง DNS cache
+ipconfig /flushdns
