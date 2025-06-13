@@ -1,45 +1,42 @@
-@echo off
-title 🔄 NOAR ULTRA BOOST
-color 0c
-mode con: cols=110 lines=40
 
-timeout /t 1 >nul
-
-:: เปิดบริการคืน
-for %%S in (
-    DiagTrack
-    SysMain
-    WSearch
-    Fax
-    Spooler
-    RetailDemo
-) do (
-    echo 🔄 เปิดบริการ %%S ...
-    sc config %%S start= auto >nul
-    net start %%S >nul 2>&1
+:: เปิด Services ที่เคยปิดกลับ
+for %%S in (SysMain WSearch DiagTrack RetailDemo Fax Spooler) do (
+    sc config %%S start= delayed-auto >nul
+    sc start %%S >nul 2>&1
 )
 
-:: รีเซ็ต registry ที่แก้ไว้
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CsEnabled /t REG_DWORD /d 1 /f >nul
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul
+:: เปิด Realtime Defender กลับ
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /f >nul 2>&1
 
-reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 400 /f >nul
-reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d 20000 /f >nul
-reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d 5000 /f >nul
-reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d 0 /f >nul
+:: คืนค่า Multimedia SystemProfile
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /f >nul 2>&1
 
-:: เปิด Windows Update
-sc config wuauserv start= auto >nul
-net start wuauserv >nul 2>&1
+:: คืนค่า TCP settings
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /f >nul 2>&1
 
-:: เปิด Windows Defender Real-time Monitoring
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 0 /f >nul
+:: ถ้าเคยยิงใส่ Interface แบบ {default} (อันนี้ควรปรับให้ใช้ Interface จริง)
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{default}" /v TcpAckFrequency /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\{default}" /v TCPNoDelay /f >nul 2>&1
 
-:: ตั้ง Power Plan กลับเป็น Balanced
-powercfg /setactive SCHEME_BALANCED >nul
+:: QoS Default
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /f >nul 2>&1
+
+:: Auto Proxy Settings
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoDetect /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /f >nul 2>&1
+
+:: ค่า TCP/IP กลับ default
+netsh int tcp reset >nul
+netsh winsock reset >nul
+netsh int ip reset >nul
+
+:: MTU Default (ไม่บังคับ แค่ปรับคืนแบบทั่วไป)
+netsh interface ipv4 set subinterface "Wi-Fi" mtu=1400 store=persistent >nul 2>&1
+netsh interface ipv4 set subinterface "Ethernet" mtu=1400 store=persistent >nul 2>&1
 
 echo.
-echo ✅ คืนค่าทุกอย่างเรียบร้อย!  
+echo ✅ คืนค่าทุกอย่างเรียบร้อย คอมกลับสู่สมดุล~ 🍃
 timeout /t 3 >nul
 exit
