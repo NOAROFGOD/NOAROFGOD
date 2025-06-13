@@ -111,3 +111,38 @@ netsh int tcp set global ecncapability=enabled
 netsh interface tcp set global congestionprovider=ctcp
 
 netsh int ip reset
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v DataBasePath /t REG_EXPAND_SZ /d %%SystemRoot%%\System32\drivers\etc /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v Domain /t REG_SZ /d "" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v ICSDomain /t REG_SZ /d "mshome.net" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v IPEnableRouter /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v HostName /t REG_SZ /d "DESKTOP-A0FJDIR" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v NV HostName /t REG_SZ /d "DESKTOP-A0FJDIR" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TcpDelAckTicks /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TcpWindowSize /t REG_DWORD /d 1087256 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v SackOpts /t REG_DWORD /d 1 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TcpMaxDataRetransmissions /t REG_DWORD /d 2 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TCPTimedWaitDelay /t REG_DWORD /d 30 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 67 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v KeepAliveTime /t REG_DWORD /d 60000 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v KeepAliveInterval /t REG_DWORD /d 1000 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v TcpMaxDupAcks /t REG_DWORD /d 2 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v EnablePMTUBHDetect /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v EnablePMTUDiscovery /t REG_DWORD /d 1 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v GlobalMaxTcpWindowSize /t REG_DWORD /d 65535 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v DisableTaskOffload /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v SynAttackProtect /t REG_DWORD /d 1 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 20480 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v DeadGWDetectDefault /t REG_DWORD /d 1 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v DhcpNameServer /t REG_SZ /d "192.168.1.1" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters" /v Tcp1323 /t REG_DWORD /d 1 /f
+
+:: -------------------------------
+:: ตั้งค่าใน Interfaces
+:: -------------------------------
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{b58adb3b-0c69-4ea3-8105-df8832c12608}" /v EnableDHCP /t REG_DWORD /d 1 /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{b58adb3b-0c69-4ea3-8105-df8832c12608}" /v DhcpIPAddress /t REG_SZ /d "192.168.1.8" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{b58adb3b-0c69-4ea3-8105-df8832c12608}" /v DhcpSubnetMask /t REG_SZ /d "255.255.255.0" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{b58adb3b-0c69-4ea3-8105-df8832c12608}" /v DhcpServer /t REG_SZ /d "192.168.1.1" /f
+reg add "HKLM\SYSTEM\ControlSet001\Services\Tcpip\Parameters\Interfaces\{b58adb3b-0c69-4ea3-8105-df8832c12608}" /v DhcpNameServer /t REG_SZ /d "192.168.1.1" /f
