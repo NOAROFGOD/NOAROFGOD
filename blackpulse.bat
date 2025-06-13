@@ -8,9 +8,6 @@ for %%S in (SysMain WSearch DiagTrack RetailDemo Fax Spooler) do (
 
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul
 
-del /f /s /q %temp%\* >nul 2>&1
-del /f /s /q C:\Windows\Temp\* >nul 2>&1
-del /f /s /q C:\Windows\Prefetch\* >nul 2>&1
 
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f
 
