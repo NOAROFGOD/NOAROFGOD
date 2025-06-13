@@ -15,12 +15,6 @@ sc config "Fax" start=disabled
 sc stop "Spooler" >nul 2>&1
 sc config "Spooler" start=disabled
 
-del /f /s /q %temp%\* >nul 2>&1
-del /f /s /q C:\Windows\Temp\* >nul 2>&1
-del /f /s /q C:\Windows\Prefetch\* >nul 2>&1
-
-del /f /s /q %localappdata%\Microsoft\Windows\Explorer\thumbcache_*.db >nul 2>&1
-
 netsh int tcp set global autotuninglevel=normal
 
 netsh int tcp set global fastopen=enabled
