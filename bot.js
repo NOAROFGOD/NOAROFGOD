@@ -12,7 +12,7 @@ const {
 } = require('discord.js');
 const { google } = require('googleapis');
 const auth = new google.auth.GoogleAuth({
-  keyFile: './noar-sserver-8bdb34c58600.json',
+  keyFile: './noar-sserver-9c0924c3819f.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 const sheets = google.sheets('v4');
