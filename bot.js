@@ -8,6 +8,7 @@ const {
   Events,
   StringSelectMenuBuilder,
   PermissionsBitField,
+  ChannelType,
 } = require('discord.js');
 
 const client = new Client({
@@ -39,7 +40,7 @@ client.once('ready', () => {
 // !shop เรียกเมนูร้านค้า
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
-  if (msg.content === '!createmenu') {
+  if (msg.content === '!shop') {
     const embed = new EmbedBuilder()
       .setTitle('🛍️ BlackPulse Shop')
       .setDescription('เลือกสินค้าที่ต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
@@ -62,8 +63,10 @@ client.on('messageCreate', async (msg) => {
       .setLabel('🛒 สั่งซื้อเลย')
       .setStyle(ButtonStyle.Primary);
 
-    const row = new ActionRowBuilder().addComponents(select, button);
-    await msg.channel.send({ embeds: [embed], components: [row] });
+    const rowSelect = new ActionRowBuilder().addComponents(select);
+    const rowButton = new ActionRowBuilder().addComponents(button);
+
+    await msg.channel.send({ embeds: [embed], components: [rowSelect, rowButton] });
   }
 });
 
@@ -74,8 +77,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const product = interaction.values[0];
   pendingOrders.set(interaction.user.id, product);
-
-  await interaction.deferUpdate(); // ✅ ไม่ตอบกลับ แต่ไม่ error
+  await interaction.deferUpdate();
 });
 
 // กดปุ่มสั่งซื้อ → สร้างห้องใหม่ใน Category
@@ -101,7 +103,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const channel = await guild.channels.create({
     name: `📁-order-${user.username.toLowerCase()}`,
-    type: 0, // 0 = text
+    type: ChannelType.GuildText,
     parent: CATEGORY_ID,
     permissionOverwrites: [
       { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
@@ -110,12 +112,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
     ],
   });
 
-  await guild.members.cache.get(user.id)?.roles.add(role);
+  const member = await guild.members.fetch(user.id);
+  await member.roles.add(role);
 
   const embed = new EmbedBuilder()
     .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
     .setDescription(`💰 ราคา: **${price} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้`)
-    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=68580998&is=6856b818&hm=bac10995cacb6ed40e581ba4d8c7cb11d7f362416bc7801e1198fe830881abaf&') // 🔁 เปลี่ยนเป็นรูป QR จริง
+    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=68580998&is=6856b818&hm=bac10995cacb6ed40e581ba4d8c7cb11d7f362416bc7801e1198fe830881abaf&')
     .setColor(0x00ff00);
 
   await channel.send({ content: `<@${user.id}>`, embeds: [embed] });
