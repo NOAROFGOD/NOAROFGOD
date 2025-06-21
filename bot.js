@@ -11,7 +11,6 @@ const {
 } = require('discord.js');
 
 const { google } = require('googleapis');
-const fs = require('fs');
 
 const client = new Client({
   intents: [
@@ -24,7 +23,7 @@ const client = new Client({
 
 const ADMIN_CHANNEL_ID = '1385951413229850634';
 const CATEGORY_ID = '1385950753763623062';
-const DONATOR_ROLE_ID = '1385953143937957968';
+const DONATOR_ROLE_ID = '1386003699444224160';
 const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
 
 const auth = new google.auth.GoogleAuth({
@@ -52,7 +51,7 @@ client.on('messageCreate', async (msg) => {
   if (msg.content === '!createmenu') {
     const embed = new EmbedBuilder()
       .setTitle('🛍️ BlackPulse Shop')
-      .setDescription('เลือกสินค้าที่ต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
+      .setDescription('เลือกสินค้าที่ท่านต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
       .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385980365969293523/xxxx.gif')
       .setColor(0x00ccff);
 
@@ -121,7 +120,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const embed = new EmbedBuilder()
     .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
-    .setDescription(`💰 ราคา: **${price} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้`)
+    .setDescription(`💰 ราคา: **${price} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้ได้เลยค่ะ`)
     .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg')
     .setColor(0x00ff00);
 
@@ -134,8 +133,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const message = collected.first();
     const slip = message.attachments.first();
 
-    const approveButton = new ButtonBuilder().setCustomId(`approve_order_${user.id}`).setLabel('✅ อนุมัติ').setStyle(ButtonStyle.Success);
-    const rejectButton = new ButtonBuilder().setCustomId(`reject_order_${user.id}`).setLabel('❌ ยกเลิก').setStyle(ButtonStyle.Danger);
+    // ตอบกลับลูกค้าแจ้งรับสลิป
+    await message.reply('✅ ส่งหลักฐานการชำระเงินให้แอดมินแล้ว รอ3-5นาทีน้าา~');
+
+    const approveButton = new ButtonBuilder()
+      .setCustomId(`approve_order_${user.id}`)
+      .setLabel('✅ อนุมัติ')
+      .setStyle(ButtonStyle.Success);
+
+    const rejectButton = new ButtonBuilder()
+      .setCustomId(`reject_order_${user.id}`)
+      .setLabel('❌ ยกเลิก')
+      .setStyle(ButtonStyle.Danger);
+
     const actionRow = new ActionRowBuilder().addComponents(approveButton, rejectButton);
 
     const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
@@ -145,7 +155,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       components: [actionRow],
     });
   } catch (err) {
-    await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่โดยพิมพ์ `!shop`');
+    await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่`');
     setTimeout(async () => {
       await guild.members.cache.get(user.id)?.roles.remove(role);
       await channel.delete();
@@ -182,7 +192,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
 
     await member.roles.add(DONATOR_ROLE_ID);
-    await channel.send(`<@${userId}> ✅ คำสั่งซื้อของคุณได้รับการอนุมัติแล้วจ้า~\n🔑 คีย์ใช้งาน: \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดีน้า`);
+    await channel.send(`<@${userId}> ✅ คำสั่งซื้อของคุณได้รับการอนุมัติแล้วค้าบบบบ~\n🔑 คีย์ใช้งาน: \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดีน้า`);
     setTimeout(async () => {
       await member.roles.remove(member.roles.cache.find((r) => r.name.startsWith('🛍️-')));
       await channel.delete();
