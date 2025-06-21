@@ -86,7 +86,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId !== 'select_product') return;
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      await interaction.deferUpdate(); // ตอบแบบ invisible update
+      await interaction.deferUpdate();
     } else if (interaction.isButton()) {
       if (interaction.customId === 'confirm_order') {
         const user = interaction.user;
@@ -174,7 +174,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
           const message = collected.first();
           const slip = message.attachments.first();
 
-          // ตอบกลับลูกค้าแจ้งรับสลิป
           await message.reply(
             '✅ ส่งหลักฐานการชำระเงินให้แอดมินแล้ว รอแอดตรวจสอบ 3-5 นาทีจ้า~'
           );
@@ -205,18 +204,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
             '⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่'
           );
           setTimeout(async () => {
-            await guild.members.cache.get(user.id)?.roles.remove(role);
+            const roleToRemove = guild.roles.cache.find(
+              (r) => r.name === `🛍️-${user.username}`
+            );
+            if (roleToRemove) await guild.members.cache.get(user.id)?.roles.remove(roleToRemove);
             await channel.delete();
           }, 5000);
         }
       } else {
-        // handle approve / reject buttons
         const [action, , userId] = interaction.customId.split('_');
         if (!userId) return;
 
         const member = await interaction.guild.members.fetch(userId);
-
-        // หา channel ห้องออเดอร์ลูกค้า
         const orderChannel = interaction.guild.channels.cache.find(
           (ch) => ch.name === `📁-order-${userId}`
         );
@@ -255,41 +254,48 @@ client.on(Events.InteractionCreate, async (interaction) => {
             const embed = new EmbedBuilder()
               .setTitle('✅ อนุมัติคำสั่งซื้อ')
               .setDescription(
-                `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้ว~\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดีหากทำหายticketมาได้ครับ`
+                `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้ว~\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
               )
               .setColor('Green');
 
             await orderChannel.send({ embeds: [embed] });
 
             setTimeout(async () => {
-              await member.roles.remove(
-                member.roles.cache.find((r) => r.name.startsWith('🛍️-'))
+              const roleToRemove = member.roles.cache.find((r) =>
+                r.name.startsWith('🛍️-')
               );
+              if (roleToRemove) await member.roles.remove(roleToRemove);
               await orderChannel.delete();
             }, 5 * 60 * 1000);
           }
           await interaction.deferUpdate();
         } else if (action === 'reject') {
           await interaction.reply({
-            content: 'กรุณาพิมพ์เหตุผลการยกเลิกภายใน 2 นาทีถัดไปในแชทนี้...',
+            content: 'กรุณาพิมพ์เหตุผลการยกเลิกภายใน 2 นาทีถัดไปในแชทแอดมิน...',
             ephemeral: true,
           });
 
           const filter = (m) => m.author.id === interaction.user.id;
-          const collected = await orderChannel
-            .awaitMessages({ filter, max: 1, time: 120000 })
-            .catch(() => {});
+
+          const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
+          const collected = await adminChannel.awaitMessages({
+            filter,
+            max: 1,
+            time: 120000,
+          }).catch(() => {});
+
           const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
 
           if (orderChannel) {
             await orderChannel.send({
-              content: `<@${userId}> ❌ คำสั่งซื้อถูกยกเลิกด้วยเหตุผล : ${reason}`,
+              content: `<@${userId}> ❌ คำสั่งซื้อถูกยกเลิกด้วยเหตุผล: ${reason}`,
             });
 
             setTimeout(async () => {
-              await member.roles.remove(
-                member.roles.cache.find((r) => r.name.startsWith('🛍️-'))
+              const roleToRemove = member.roles.cache.find((r) =>
+                r.name.startsWith('🛍️-')
               );
+              if (roleToRemove) await member.roles.remove(roleToRemove);
               await orderChannel.delete();
             }, 2 * 60 * 1000);
           }
