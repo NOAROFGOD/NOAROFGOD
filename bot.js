@@ -24,6 +24,7 @@ const client = new Client({
 
 const ADMIN_CHANNEL_ID = '1385951413229850634';
 const CATEGORY_ID = '1385950753763623062';
+const DONATOR_ROLE_ID = '1385953143937957968';
 const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
 
 const auth = new google.auth.GoogleAuth({
@@ -71,10 +72,13 @@ client.on('messageCreate', async (msg) => {
       .setLabel('🛒 สั่งซื้อเลย')
       .setStyle(ButtonStyle.Primary);
 
-    const row1 = new ActionRowBuilder().addComponents(select);
-    const row2 = new ActionRowBuilder().addComponents(button);
-
-    await msg.channel.send({ embeds: [embed], components: [row1, row2] });
+    await msg.channel.send({
+      embeds: [embed],
+      components: [
+        new ActionRowBuilder().addComponents(select),
+        new ActionRowBuilder().addComponents(button),
+      ],
+    });
   }
 });
 
@@ -102,7 +106,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   });
 
   const channel = await guild.channels.create({
-    name: `📁-order-${user.username.toLowerCase()}`,
+    name: `📁-order-${user.id}`,
     type: 0,
     parent: CATEGORY_ID,
     permissionOverwrites: [
@@ -130,8 +134,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const message = collected.first();
     const slip = message.attachments.first();
 
-    const approveButton = new ButtonBuilder().setCustomId('approve_order').setLabel('✅ อนุมัติ').setStyle(ButtonStyle.Success);
-    const rejectButton = new ButtonBuilder().setCustomId('reject_order').setLabel('❌ ยกเลิก').setStyle(ButtonStyle.Danger);
+    const approveButton = new ButtonBuilder().setCustomId(`approve_order_${user.id}`).setLabel('✅ อนุมัติ').setStyle(ButtonStyle.Success);
+    const rejectButton = new ButtonBuilder().setCustomId(`reject_order_${user.id}`).setLabel('❌ ยกเลิก').setStyle(ButtonStyle.Danger);
     const actionRow = new ActionRowBuilder().addComponents(approveButton, rejectButton);
 
     const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
@@ -142,16 +146,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   } catch (err) {
     await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่โดยพิมพ์ `!shop`');
+    setTimeout(async () => {
+      await guild.members.cache.get(user.id)?.roles.remove(role);
+      await channel.delete();
+    }, 5000);
   }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
-  const channel = interaction.channel;
-  const userId = channel.name.split('-').pop();
-  const member = await interaction.guild.members.fetch(userId);
+  const [action, , userId] = interaction.customId.split('_');
+  if (!userId) return;
 
-  if (interaction.customId === 'approve_order') {
+  const member = await interaction.guild.members.fetch(userId);
+  const channel = interaction.channel;
+
+  if (action === 'approve') {
     const authClient = await auth.getClient();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
@@ -160,12 +170,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const rows = res.data.values || [];
     const available = rows.find((row) => !row[1]);
-
     if (!available) return interaction.reply({ content: '❌ ไม่พบคีย์ว่าง', ephemeral: true });
 
     const key = available[0];
     const rowIndex = rows.findIndex((r) => r[0] === key) + 2;
-
     await sheets.spreadsheets.values.update({
       spreadsheetId: SHEET_ID,
       range: `Sheet1!B${rowIndex}`,
@@ -173,15 +181,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
       requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
     });
 
-    await channel.send(`<@${userId}> ✅ คำสั่งซื้อของคุณได้รับการอนุมัติแล้วจ้า~\n🔑 คีย์ใช้งาน: \`${key}\``);
-    await member.roles.remove(member.roles.cache.find((r) => r.name.startsWith('🛍️-')));
-    await channel.delete();
-  } else if (interaction.customId === 'reject_order') {
-    await channel.send(`<@${userId}> ❌ คำสั่งซื้อถูกยกเลิกเนื่องจากไม่ได้รับการอนุมัติค่ะ`);
+    await member.roles.add(DONATOR_ROLE_ID);
+    await channel.send(`<@${userId}> ✅ คำสั่งซื้อของคุณได้รับการอนุมัติแล้วจ้า~\n🔑 คีย์ใช้งาน: \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดีน้า`);
     setTimeout(async () => {
       await member.roles.remove(member.roles.cache.find((r) => r.name.startsWith('🛍️-')));
       await channel.delete();
-    }, 120000);
+    }, 5 * 60 * 1000);
+  } else if (action === 'reject') {
+    await interaction.reply({ content: 'กรุณาพิมพ์เหตุผลการยกเลิกภายใน 2 นาทีถัดไปในแชทนี้...', ephemeral: true });
+
+    const filter = (m) => m.author.id === interaction.user.id;
+    const collected = await channel.awaitMessages({ filter, max: 1, time: 120000 }).catch(() => {});
+    const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
+
+    await channel.send(`<@${userId}> ❌ คำสั่งซื้อถูกยกเลิก: ${reason}`);
+    setTimeout(async () => {
+      await member.roles.remove(member.roles.cache.find((r) => r.name.startsWith('🛍️-')));
+      await channel.delete();
+    }, 2 * 60 * 1000);
   }
 });
 
