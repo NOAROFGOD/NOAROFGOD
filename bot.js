@@ -6,14 +6,18 @@ const {
   ButtonStyle,
   EmbedBuilder,
   Events,
-  StringSelectMenuBuilder
+  StringSelectMenuBuilder,
+  PermissionsBitField,
+  ChannelType
 } = require('discord.js');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-const ADMIN_CHANNEL_ID = '1385924696301633596'; // เปลี่ยนเป็น channel ID ของแอดมิน
+const ADMIN_ROLE_ID = 'YOUR_ADMIN_ROLE_ID'; // เปลี่ยนตามจริง
+const CATEGORY_ID = 'YOUR_CATEGORY_ID'; // หมวดหมู่ที่จะสร้างช่องใหม่
+
 const productCatalog = {
   boostfps: { name: 'BoostFPS', price: 129 },
   network: { name: 'Network Tweaker', price: 149 },
@@ -25,7 +29,7 @@ const productCatalog = {
 const pendingOrders = new Map();
 
 client.once('ready', () => {
-  console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
+  console.log(`✅ บอทออนไลน์: ${client.user.tag}`);
 });
 
 client.on('messageCreate', async (msg) => {
@@ -33,8 +37,7 @@ client.on('messageCreate', async (msg) => {
   if (msg.content === '!shop') {
     const embed = new EmbedBuilder()
       .setTitle('🛒 BlackPulse Shop')
-      .setDescription('เลือกสินค้าที่ต้องการ แล้วดำเนินการสั่งซื้อได้เลย!')
-      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385928813560594524/IMG_7843.gif')
+      .setDescription('เลือกสินค้าเพื่อสั่งซื้อได้เลย!')
       .setColor(0x00ccff);
 
     const select = new StringSelectMenuBuilder()
@@ -59,73 +62,86 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const product = productCatalog[productId];
   if (!product) return;
 
-  pendingOrders.set(interaction.user.id, { type: productId });
+  // สร้างห้องใหม่
+  const guild = interaction.guild;
+  if (!guild) return;
 
-  const embed = new EmbedBuilder()
-    .setTitle(`💰 โปรดชำระเงิน ${product.price} บาท`)
-    .setDescription(`🛒 สินค้า: **${product.name}**\n\n📲 สแกน QR ด้านล่าง แล้วกดปุ่มเพื่อแนบหลักฐานการโอน`)
-    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385929780452655174/IMG_7844.jpg')
-    .setColor(0x00ff00);
+  const channelName = `order-${interaction.user.username.toLowerCase()}-${Date.now()}`;
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('confirm_payment')
-      .setLabel('📤 ส่งหลักฐานการชำระเงิน')
-      .setStyle(ButtonStyle.Success)
-  );
-
-  await interaction.reply({
-    embeds: [embed],
-    components: [row],
-    ephemeral: true // ✅ ให้เห็นแค่คนกด
-  });
-});
-
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton()) return;
-  if (interaction.customId !== 'confirm_payment') return;
-
-  const config = pendingOrders.get(interaction.user.id);
-  if (!config) {
-    await interaction.reply({ content: '❌ ไม่พบคำสั่งซื้อของคุณ', ephemeral: true });
-    return;
-  }
-
-  await interaction.reply({
-    content: '📸 กรุณาแนบ **รูปภาพหลักฐานการโอนเงิน** ด้านล่างภายใน 3 นาที (กด 📎 เพื่ออัปโหลด)',
-    ephemeral: true
-  });
-
-  const filter = (m) =>
-    m.author.id === interaction.user.id &&
-    m.attachments.size > 0 &&
-    m.attachments.first().contentType?.startsWith('image/');
+  // สร้าง permission ให้เฉพาะแอดมินกับผู้ใช้คนสั่งเห็น
+  const permissionOverwrites = [
+    {
+      id: guild.roles.everyone, // ปิดไม่ให้คนทั่วไปเข้าช่องนี้
+      deny: [PermissionsBitField.Flags.ViewChannel],
+    },
+    {
+      id: interaction.user.id, // ให้เจ้าของช่องเข้าถึงได้
+      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles],
+    },
+    {
+      id: ADMIN_ROLE_ID, // ให้แอดมินเข้าถึงได้
+      allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.ManageMessages],
+    }
+  ];
 
   try {
-    const collected = await interaction.channel.awaitMessages({
-      filter,
-      max: 1,
-      time: 180000,
-      errors: ['time'],
+    const channel = await guild.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      parent: CATEGORY_ID,
+      permissionOverwrites
     });
 
-    const message = collected.first();
-    const proofImage = message.attachments.first();
-    const product = productCatalog[config.type];
+    pendingOrders.set(interaction.user.id, { type: productId, channelId: channel.id });
 
-    const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-    await adminChannel.send({
-      content: `📥 คำสั่งซื้อจาก <@${interaction.user.id}>\n🛒 สินค้า: ${product.name}\n💸 ราคา: ${product.price} บาท\n📎 แนบหลักฐานการโอน`,
-      files: [proofImage]
-    });
-
-    await message.reply('✅ ส่งหลักฐานเรียบร้อยแล้ว รอแอดมินตรวจสอบนะคะ 💬');
-  } catch (err) {
-    console.log('❌ ไม่ได้รับภาพภายในเวลา:', err);
-    await interaction.followUp({
-      content: '⏰ หมดเวลาส่งหลักฐานแล้วค่ะ ลองใหม่อีกครั้งโดยพิมพ์ `!shop`',
+    await interaction.reply({
+      content: `✅ สร้างช่องคำสั่งซื้อส่วนตัวให้คุณแล้ว: <#${channel.id}> กรุณาแนบหลักฐานชำระเงินในช่องนี้`,
       ephemeral: true
     });
+
+    // ส่งข้อความต้อนรับในช่องใหม่
+    const welcomeEmbed = new EmbedBuilder()
+      .setTitle('🧾 คำสั่งซื้อของคุณ')
+      .setDescription(`คุณเลือกสินค้า: **${product.name}**\nราคา: **${product.price} บาท**\n\nโปรดแนบรูปหลักฐานการชำระเงินในช่องนี้ และรอแอดมินตรวจสอบ`)
+      .setColor(0x00ff00);
+
+    await channel.send({ content: `<@${interaction.user.id}>`, embeds: [welcomeEmbed] });
+
+  } catch (err) {
+    console.error('❌ สร้างช่องคำสั่งซื้อไม่สำเร็จ:', err);
+    if (!interaction.replied) {
+      await interaction.reply({ content: '❌ เกิดข้อผิดพลาดในการสร้างช่องคำสั่งซื้อ กรุณาลองใหม่อีกครั้ง', ephemeral: true });
+    }
+  }
+});
+
+// ส่วนตรวจจับไฟล์แนบในช่องที่สร้าง
+client.on('messageCreate', async (msg) => {
+  if (msg.author.bot) return;
+
+  const order = pendingOrders.get(msg.author.id);
+  if (!order) return;
+
+  if (msg.channel.id !== order.channelId) return; // ต้องอยู่ในช่องคำสั่งซื้อส่วนตัวเท่านั้น
+  if (msg.attachments.size === 0) return; // ต้องแนบไฟล์เท่านั้น
+
+  // ส่งหลักฐานไปแอดมิน
+  try {
+    const guild = msg.guild;
+    const adminRole = guild.roles.cache.get(ADMIN_ROLE_ID);
+    if (!adminRole) return;
+
+    // ส่งข้อความในแชทแอดมิน (หรือจะเปลี่ยนเป็นส่งในช่องแอดมินก็ได้)
+    const adminMsg = await msg.channel.send({
+      content: `📥 คำสั่งซื้อจาก <@${msg.author.id}>\nสินค้า: ${productCatalog[order.type].name}\nโปรดตรวจสอบหลักฐานชำระเงิน`,
+      files: [...msg.attachments.values()]
+    });
+
+    // แจ้งลูกค้า
+    await msg.reply('✅ เราได้รับหลักฐานการชำระเงินแล้ว รอแอดมินตรวจสอบนะคะ');
+
+  } catch (err) {
+    console.error('❌ ส่งหลักฐานไปแอดมินไม่สำเร็จ:', err);
   }
 });
 
