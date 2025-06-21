@@ -35,11 +35,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 const pendingOrders = new Map();
 const priceMap = {
-  boostfps: 129,
-  network: 149,
-  memory: 99,
-  dll: 179,
-  all: 249,
+  DLLBoostfpsV2: 129,
 };
 
 client.once('ready', () => {
@@ -175,7 +171,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           const slip = message.attachments.first();
 
           await message.reply(
-            '✅ ส่งหลักฐานการชำระเงินให้แอดมินแล้ว รอแอดตรวจสอบ 3-5 นาทีจ้า~'
+            '✅ ส่งหลักฐานการชำระเงินให้แอดมินแล้ว รอแอดตรวจสอบ 3-5 นาทีค่ะ~'
           );
 
           const approveButton = new ButtonBuilder()
@@ -254,7 +250,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             const embed = new EmbedBuilder()
               .setTitle('✅ อนุมัติคำสั่งซื้อ')
               .setDescription(
-                `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้ว~\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
+                `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้วค่ะ\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
               )
               .setColor('Green');
 
@@ -271,7 +267,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           await interaction.deferUpdate();
         } else if (action === 'reject') {
           await interaction.reply({
-            content: 'กรุณาพิมพ์เหตุผลการยกเลิกภายใน 2 นาทีถัดไปในแชทแอดมิน...',
+            content: 'ใส่เหตุผลที่ยกเลิก',
             ephemeral: true,
           });
 
@@ -288,7 +284,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
           if (orderChannel) {
             await orderChannel.send({
-              content: `<@${userId}> ❌ คำสั่งซื้อถูกยกเลิกด้วยเหตุผล: ${reason}`,
+              content: `❌ คำสั่งซื้อของคุณถูกยกเลิกด้วยเหตุผล : ${reason}`,
             });
 
             setTimeout(async () => {
