@@ -11,43 +11,63 @@ const {
 } = require('discord.js');
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+  ],
 });
 
-const ADMIN_CHANNEL_ID = '1385951413229850634'; // 🔁 แก้เป็นช่องที่ใช้จริง
-let orderQueue = 1;
-const pendingOrders = new Map(); // สำหรับเก็บออเดอร์ที่เลือกไว้
+// ✅ แก้ 2 ตัวนี้ก่อนใช้งานจริง
+const ADMIN_CHANNEL_ID = '1385951413229850634';
+const CATEGORY_ID = '1385950753763623062';
+
+const pendingOrders = new Map();
+const priceMap = {
+  boostfps: 129,
+  network: 149,
+  memory: 99,
+  dll: 179,
+  all: 249,
+};
 
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
 });
 
+// !shop เรียกเมนูร้านค้า
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
   if (msg.content === '!shop') {
     const embed = new EmbedBuilder()
       .setTitle('🛍️ BlackPulse Shop')
-      .setDescription('เลือกสินค้าที่ต้องการ แล้วกดปุ่ม "สั่งซื้อเลย" เพื่อเริ่มต้นการสั่งซื้อ')
-      .setImage('https://postimg.cc/zVLTWzm5')
+      .setDescription('เลือกสินค้าที่ต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
+      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385968188021280859/IMG_7845.jpg?ex=6857fef6&is=6856ad76&hm=e343e0485461f72e231148c540b41bab9e4dbec7df7bf76e139d725b8ddc6b3d&')
       .setColor(0x00ccff);
 
     const select = new StringSelectMenuBuilder()
       .setCustomId('select_product')
       .setPlaceholder('📦 เลือกสินค้า')
-      .addOptions([
-        { label: 'BoostFPS', value: 'boostfps', description: '129 บาท' },
-        { label: 'Network Tweaker', value: 'network', description: '149 บาท' },
-        { label: 'Memory Cleaner', value: 'memory', description: '99 บาท' },
-        { label: 'Auto DLL Builder', value: 'dll', description: '179 บาท' },
-        { label: 'All-in-One Pack', value: 'all', description: '249 บาท' },
-      ]);
+      .addOptions(
+        Object.keys(priceMap).map((key) => ({
+          label: key.toUpperCase(),
+          value: key,
+          description: `${priceMap[key]} บาท`,
+        }))
+      );
 
-    const row = new ActionRowBuilder().addComponents(select);
+    const button = new ButtonBuilder()
+      .setCustomId('confirm_order')
+      .setLabel('🛒 สั่งซื้อเลย')
+      .setStyle(ButtonStyle.Primary);
+
+    const row = new ActionRowBuilder().addComponents(select, button);
     await msg.channel.send({ embeds: [embed], components: [row] });
   }
 });
 
-// ⏬ เมื่อเลือกรายการ
+// เมื่อเลือกสินค้า → แค่บันทึกไว้ ไม่ตอบกลับใด ๆ
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isStringSelectMenu()) return;
   if (interaction.customId !== 'select_product') return;
@@ -55,46 +75,34 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const product = interaction.values[0];
   pendingOrders.set(interaction.user.id, product);
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('confirm_order')
-      .setLabel('🛒 สั่งซื้อเลย')
-      .setStyle(ButtonStyle.Primary)
-  );
-
-  await interaction.reply({
-    content: `📦 คุณเลือก: **${product}**\nคลิกปุ่มด้านล่างเพื่อสั่งซื้อเลย!`,
-    components: [row],
-    ephemeral: true,
-  });
+  await interaction.deferUpdate(); // ✅ ไม่ตอบกลับ แต่ไม่ error
 });
 
-// ⏬ เมื่อกดปุ่มสั่งซื้อ
+// กดปุ่มสั่งซื้อ → สร้างห้องใหม่ใน Category
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton()) return;
-  if (interaction.customId !== 'confirm_order') return;
+  if (!interaction.isButton() || interaction.customId !== 'confirm_order') return;
 
   const user = interaction.user;
   const guild = interaction.guild;
   const product = pendingOrders.get(user.id);
 
-  const priceMap = {
-    boostfps: 129,
-    network: 149,
-    memory: 99,
-    dll: 179,
-    all: 249,
-  };
+  if (!product) {
+    await interaction.reply({ content: '❌ กรุณาเลือกสินค้าก่อนนะคะ', ephemeral: true });
+    return;
+  }
+
   const price = priceMap[product];
 
+  // ✅ สร้าง Role แยกให้ลูกค้าเห็นห้องตัวเองเท่านั้น
   const role = await guild.roles.create({
-    name: `🛍️ Order ${user.username}`,
+    name: `🛍️-${user.username}`,
     permissions: [PermissionsBitField.Flags.ViewChannel],
   });
 
   const channel = await guild.channels.create({
-    name: `📁-ออเดอร์-${orderQueue}`,
-    type: 0,
+    name: `📁-order-${user.username.toLowerCase()}`,
+    type: 0, // 0 = text
+    parent: CATEGORY_ID,
     permissionOverwrites: [
       { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
       { id: role.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles] },
@@ -102,19 +110,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
     ],
   });
 
-  await guild.members.cache.get(user.id).roles.add(role);
+  await guild.members.cache.get(user.id)?.roles.add(role);
 
   const embed = new EmbedBuilder()
-    .setTitle(`📦 สั่งซื้อ: ${product.toUpperCase()}`)
-    .setDescription(`💰 ราคา: ${price} บาท\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบหลักฐานในห้องนี้เลยค่ะ`)
-    .setImage('https://postimg.cc/HVGbwGTy') // 🔁 ใส่ลิงก์ QR ของตัวเอง
+    .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
+    .setDescription(`💰 ราคา: **${price} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้`)
+    .setImage('1385945381786878032') // 🔁 เปลี่ยนเป็นรูป QR จริง
     .setColor(0x00ff00);
 
   await channel.send({ content: `<@${user.id}>`, embeds: [embed] });
 
-  orderQueue++;
-
-  // ฟังแนบรูป
   const filter = (m) =>
     m.author.id === user.id &&
     m.attachments.size > 0 &&
@@ -127,13 +132,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
     await adminChannel.send({
-      content: `📥 ออเดอร์จาก <@${user.id}> - สินค้า: ${product.toUpperCase()} - ราคา: ${price} บาท\nช่อง: <#${channel.id}>`,
+      content: `📥 ออเดอร์จาก <@${user.id}> - สินค้า: ${product.toUpperCase()} - ราคา: ${price} บาท\nห้อง: <#${channel.id}>`,
       files: [slip],
     });
 
-    await message.reply('✅ ส่งหลักฐานแล้ว รอแอดมินตรวจสอบสักครู่นะคะ');
+    await message.reply('✅ ส่งหลักฐานเรียบร้อยแล้วจ้า รอแอดมินตรวจสอบน้า~');
   } catch (err) {
-    await channel.send('⏰ ไม่ได้รับหลักฐานภายใน 5 นาที กรุณาสั่งซื้อใหม่');
+    await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่โดยพิมพ์ `!shop`');
   }
 });
 
