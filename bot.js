@@ -219,3 +219,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
         // หา channel ห้องออเดอร์ลูกค้า
         const orderChannel = interaction.guild.channels.cache.find(
           (ch)
+      );
