@@ -39,7 +39,7 @@ client.once('ready', () => {
 // !shop เรียกเมนูร้านค้า
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
-  if (msg.content === '!shop') {
+  if (msg.content === '!createmenu') {
     const embed = new EmbedBuilder()
       .setTitle('🛍️ BlackPulse Shop')
       .setDescription('เลือกสินค้าที่ต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
