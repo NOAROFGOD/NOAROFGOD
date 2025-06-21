@@ -11,12 +11,12 @@ const {
   Events,
   StringSelectMenuBuilder,
 } = require('discord.js');
-const QRCode = require('qrcode');
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-const ADMIN_CHANNEL_ID = '1385924696301633596'; // 🔁 ใส่ channel หลังบ้านตรงนี้
+const ADMIN_CHANNEL_ID = '1385924696301633596';
 const pendingOrders = new Map();
 
 client.once('ready', () => {
@@ -29,7 +29,7 @@ client.on('messageCreate', async (msg) => {
     const embed = new EmbedBuilder()
       .setTitle('🛒 BlackPulse Shop')
       .setDescription('เลือกประเภทไฟล์ที่ต้องการ แล้วเริ่มตั้งค่าได้เลย!')
-      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385928813560594524/IMG_7843.gif?ex=6857da4a&is=685688ca&hm=aab1506ad7227072f050b7ba7b72e52687e4912723e74c8011ad034c7edd1f1c&') // 🔁 เปลี่ยนเป็นรูปของร้านเองได้
+      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385928813560594524/IMG_7843.gif') // รูปเมนู
       .setColor(0x00ccff);
 
     const select = new StringSelectMenuBuilder()
@@ -61,14 +61,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId('lod')
-            .setLabel('LOD Scale')
+            .setLabel('LOD Scale (เช่น 1.0)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         ),
         new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId('draw')
-            .setLabel('Draw Distance')
+            .setLabel('Draw Distance (เช่น 300)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
@@ -78,14 +78,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
         new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId('ping')
-            .setLabel('Ping Delay')
+            .setLabel('Ping Delay (ms)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         ),
         new ActionRowBuilder().addComponents(
           new TextInputBuilder()
             .setCustomId('packet')
-            .setLabel('Packet Rate')
+            .setLabel('Packet Rate (packets/sec)')
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
@@ -122,7 +122,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const embed = new EmbedBuilder()
     .setTitle('💰 โปรดชำระเงิน 129 บาท')
     .setDescription(`ประเภทไฟล์: ${fileType}\nสแกน QR ด้านล่าง แล้วกดปุ่มส่งหลักฐานพร้อมแนบรูปภาพ`)
-    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385929780452655174/IMG_7844.jpg?ex=6857db30&is=685689b0&hm=31800af7885404557af9788d99c1b9dadb7535c7ff6979f1f879a23f0a92dd51&')
+    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385929780452655174/IMG_7844.jpg')
     .setColor(0x00ff00);
 
   const row = new ActionRowBuilder().addComponents(
@@ -134,7 +134,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   await interaction.reply({
     embeds: [embed],
-    files: [{ attachment: qrBuffer, name: 'qrcode.png' }],
     components: [row],
     ephemeral: true,
   });
