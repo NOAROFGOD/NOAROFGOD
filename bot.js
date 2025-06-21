@@ -14,9 +14,9 @@ const {
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
-
-const ADMIN_ROLE_ID = 'YOUR_ADMIN_ROLE_ID'; // เปลี่ยนตามจริง
-const CATEGORY_ID = 'YOUR_CATEGORY_ID'; // หมวดหมู่ที่จะสร้างช่องใหม่
+const ADMIN_CHANNEL_ID = '1385951413229850634';
+const ADMIN_ROLE_ID = '1384125348610048130'; // เปลี่ยนตามจริง
+const CATEGORY_ID = '1385950753763623062'; // หมวดหมู่ที่จะสร้างช่องใหม่
 
 const productCatalog = {
   boostfps: { name: 'BoostFPS', price: 129 },
