@@ -43,7 +43,7 @@ client.on('messageCreate', async (msg) => {
     const embed = new EmbedBuilder()
       .setTitle('🛍️ BlackPulse Shop')
       .setDescription('เลือกสินค้าที่ต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
-      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385968188021280859/IMG_7845.jpg?ex=6857fef6&is=6856ad76&hm=e343e0485461f72e231148c540b41bab9e4dbec7df7bf76e139d725b8ddc6b3d&')
+      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385980365969293523/xxxx.gif?ex=68580a4d&is=6856b8cd&hm=6b9c1217b9909c8d34e296c2c3d7c1850b02d646224ba766a5b4823db03f43f1&')
       .setColor(0x00ccff);
 
     const select = new StringSelectMenuBuilder()
@@ -115,7 +115,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const embed = new EmbedBuilder()
     .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
     .setDescription(`💰 ราคา: **${price} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้`)
-    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385945381501927616/IMG_7844.jpg?ex=6857e9b8&is=68569838&hm=6c49fd539c74fc56eb5545bbbfea07f76e5a704ffe3e88b1596ebf2abd8b942d&') // 🔁 เปลี่ยนเป็นรูป QR จริง
+    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=68580998&is=6856b818&hm=bac10995cacb6ed40e581ba4d8c7cb11d7f362416bc7801e1198fe830881abaf&') // 🔁 เปลี่ยนเป็นรูป QR จริง
     .setColor(0x00ff00);
 
   await channel.send({ content: `<@${user.id}>`, embeds: [embed] });
