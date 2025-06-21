@@ -115,7 +115,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const embed = new EmbedBuilder()
     .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
     .setDescription(`💰 ราคา: **${price} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้`)
-    .setImage('1385945381786878032') // 🔁 เปลี่ยนเป็นรูป QR จริง
+    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385945381501927616/IMG_7844.jpg?ex=6857e9b8&is=68569838&hm=6c49fd539c74fc56eb5545bbbfea07f76e5a704ffe3e88b1596ebf2abd8b942d&') // 🔁 เปลี่ยนเป็นรูป QR จริง
     .setColor(0x00ff00);
 
   await channel.send({ content: `<@${user.id}>`, embeds: [embed] });
