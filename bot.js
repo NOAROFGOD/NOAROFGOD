@@ -16,7 +16,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID'; // ใส่ ID แชแนลหลังบ้าน
+const ADMIN_CHANNEL_ID = '1385924696301633596'; // 🔁 ใส่ channel หลังบ้านตรงนี้
 const pendingOrders = new Map();
 
 client.once('ready', () => {
@@ -28,16 +28,16 @@ client.on('messageCreate', async (msg) => {
   if (msg.content === '!shop') {
     const embed = new EmbedBuilder()
       .setTitle('🛒 BlackPulse Shop')
-      .setDescription('เลือกประเภทไฟล์ที่ต้องการปรับแต่ง ระบบจะสร้างไฟล?ให้คุณ!')
-      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385928813560594524/IMG_7843.gif?ex=6857da4a&is=685688ca&hm=aab1506ad7227072f050b7ba7b72e52687e4912723e74c8011ad034c7edd1f1c&')
+      .setDescription('เลือกประเภทไฟล์ที่ต้องการ แล้วเริ่มตั้งค่าได้เลย!')
+      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385928813560594524/IMG_7843.gif?ex=6857da4a&is=685688ca&hm=aab1506ad7227072f050b7ba7b72e52687e4912723e74c8011ad034c7edd1f1c&') // 🔁 เปลี่ยนเป็นรูปของร้านเองได้
       .setColor(0x00ccff);
 
     const select = new StringSelectMenuBuilder()
       .setCustomId('select_type')
-      .setPlaceholder('📦 เลือกประเภทไฟล์...')
+      .setPlaceholder('📦 เลือกประเภทไฟล์')
       .addOptions([
         { label: 'BoostFPS', value: 'boostfps', description: 'เพิ่ม FPS ลื่น ๆ' },
-        { label: 'Network Tweaker', value: 'network', description: 'เร่งเน็ต-ลด packet loss' }
+        { label: 'Network Tweaker', value: 'network', description: 'เร่งเน็ต ลด packet loss' }
       ]);
 
     const row = new ActionRowBuilder().addComponents(select);
@@ -45,7 +45,7 @@ client.on('messageCreate', async (msg) => {
   }
 });
 
-// 📦 เมื่อเลือกประเภท
+// เมื่อเลือกประเภท
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isStringSelectMenu()) return;
   if (interaction.customId !== 'select_type') return;
@@ -101,7 +101,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-// 📥 เมื่อ submit modal
+// เมื่อส่ง modal
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isModalSubmit()) return;
   if (!interaction.customId.startsWith('order_modal_')) return;
@@ -119,12 +119,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   pendingOrders.set(interaction.user.id, config);
 
-  const qrText = `MOCK-PROMPTPAY-${Date.now()}`;
-  const qrBuffer = await QRCode.toBuffer(qrText);
-
   const embed = new EmbedBuilder()
     .setTitle('💰 โปรดชำระเงิน 129 บาท')
-    .setDescription(`ประเภทไฟล์: ${fileType}\nกรุณาสแกน QR แล้วกดปุ่มส่งหลักฐาน`)
+    .setDescription(`ประเภทไฟล์: ${fileType}\nสแกน QR ด้านล่าง แล้วกดปุ่มส่งหลักฐานพร้อมแนบรูปภาพ`)
     .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385929780452655174/IMG_7844.jpg?ex=6857db30&is=685689b0&hm=31800af7885404557af9788d99c1b9dadb7535c7ff6979f1f879a23f0a92dd51&')
     .setColor(0x00ff00);
 
@@ -143,7 +140,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   });
 });
 
-// ✅ กดปุ่มส่งหลักฐาน
+// ส่งหลักฐานพร้อมแนบรูป
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
   if (interaction.customId !== 'confirm_payment') return;
@@ -154,16 +151,40 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-  await adminChannel.send(
-    `📥 คำสั่งซื้อจาก <@${interaction.user.id}>\nประเภท: ${config.type}\n` +
-    Object.entries(config)
-      .filter(([key]) => key !== 'type')
-      .map(([k, v]) => `${k}: ${v}`).join('\n') +
-    `\n💸 รอตรวจสอบการชำระเงิน`
-  );
+  await interaction.reply({
+    content: '📷 กรุณาส่ง **รูปภาพหลักฐานการชำระเงิน** ด้านล่างภายใน 3 นาที',
+    ephemeral: true,
+  });
 
-  await interaction.reply({ content: '📨 ส่งหลักฐานแล้ว รอแอดมินตรวจสอบนะคะ', ephemeral: true });
+  const filter = (m) =>
+    m.author.id === interaction.user.id &&
+    m.attachments.size > 0 &&
+    m.attachments.first().contentType?.startsWith('image/');
+
+  try {
+    const collected = await interaction.channel.awaitMessages({
+      filter,
+      max: 1,
+      time: 180000,
+      errors: ['time'],
+    });
+
+    const message = collected.first();
+    const proofImage = message.attachments.first();
+
+    const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
+    await adminChannel.send({
+      content: `📥 คำสั่งซื้อจาก <@${interaction.user.id}>\nประเภท: ${config.type}\n` +
+        Object.entries(config).filter(([k]) => k !== 'type').map(([k, v]) => `${k}: ${v}`).join('\n') +
+        `\n💸 แนบหลักฐานการโอน`,
+      files: [proofImage],
+    });
+
+    await message.reply('✅ ส่งหลักฐานเรียบร้อยแล้วค่ะ รอแอดมินตรวจสอบนะ');
+  } catch (err) {
+    console.log('❌ ไม่ได้รับภาพภายในเวลา:', err);
+    await interaction.followUp({ content: '⏰ หมดเวลาส่งหลักฐานแล้วค่ะ ลองใหม่อีกครั้งโดยพิมพ์ `!shop`', ephemeral: true });
+  }
 });
 
 client.login(process.env.TOKEN);
