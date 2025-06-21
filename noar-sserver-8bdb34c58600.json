@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "noar-sserver",
+  "private_key_id": "8bdb34c58600842b79c535cae41832e41eb2bb32",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCLVeO0bTFBYMXx\nlr2cDK9W59BBPCl/wzJdrMQ/WydqoUr8xXlVPWyxj4uKzDfemEb4xFx+kY8ChEVb\neGG119sapAGDGebNGElYY04s8xcuUW42O0BaVmHi83vkeXxUbrYbVjrzwIiVYVDd\nXZtAeQfzzRgyqqVoyH5b+AsSB8duPxgcwqX/gr1pPTc0JXmbXSYsWJDzXFd1/k1e\nGUFXwU2cbyi4unCS7f1HSagQaNNOVbzBnT2YgTkP/oFrZbKmbBEGQ5lQFB5RHdAS\nD6gMLjE+HP+jxMK9k3jRTHkjKmNQCGXD8735/e1K2H+88BxrTzHfA2oIeOQcTzwg\nlW1Kb0qPAgMBAAECggEALOIa+ojd//hjawIqy/TOGomL7SerGovPUpuPj/UWCmQw\nmqImBo5F0CC0S56jNKIK4qGmReMvlRj0mpV5rDD/VGKWVhvm3BRBtCYxDYu04Oe8\nP93wSelfmNLkCuITacNMCBxL2y8fEDeL6/L2Sttx81gSvmd35vwGsCuDrWgyFtHk\nhjS5VgGnZCR10zYkyokVXP7ZRBA+0H/KEAPPufd8rbEDvDDfDa4S79OIz9oKmngz\nGgcTV3+UWLke038YiX8NkuksBcMTv+UJfaXYFiUDL4Ui1bOn272EPdcxGKioaKte\nDayq73360kqDI8QnAPKpaIgdhWIoiKiIuQVdNPUHIQKBgQDBLASR5Urg9G0/Sgw8\nOc+ACGToDSKVxG5GorB2xXZW16tnqnPAsYEuseivLtwvVK/g7Mb6mcS51PKtWmVP\na61/ZhSsirAxzDagNKDmEEixIRyQtBXjfCdBPOWR2OfZ438FBTsDwd5wtbKTWu2t\ndFXrhplGon1fQTpe+UuDnOoYnwKBgQC4p1BzET6r3k0yq7Vwi9C1hyGBpbUCt+W6\njnhzGC12+olosDdw8zmaFvGF5N+wRvruMzn/JzP3zLDDxfCu/Oej2iNq8mPeg3Zu\nZHSw1mBTFOKfVaj1slnk9VXB7jYnq1RpynBl9pS4fuqbp3dDBHyQEkgJyyUHUEg6\nArPPSXNYEQKBgQCvaoKH3jleCHiAhYSQ2EqG0JiZZPwoFqWxfSFT6cKp39VmIRJW\nRJqzxZkwJBSM4pGIZlvWy/YqbqclJrZjJbv6ub9CY/rWbcSZPNFzugvY1eGzweUy\nm9al1l/+ToNUiNMawwIxSkbuAQG18FdvMPqpE6Ry0TGaY4hXIHkjfkXSrwKBgQCg\nqYNH+xMqeyt0EQ63NA+OQlsW8NUD3nnVzixjCABW6zovilNSxW2y8o+GzlMKj1e5\ndXza0oNW8hRC4rC9sHLjj+MNJIVcj8m111Xonz4ES8G6nM97p4irvAK3z8nyzhGO\nUoNlVBymQldiw1zzRK4UtLNVQhmfuWx+fOdyThg74QKBgQCb/kQ0DARXdsmoPg1n\nB9gqX6bTTGINUlLCAf+C+a3kH6Cy/+R7EybJgPIu1o/EQzxOTTNEyOwP6QCE9ppW\nplhwwZaEY5wCO8HevJk8EB+x6t+dvguuJ1hLFP50r90kCYlKo4c+EMdPuB+xXSdB\nSfhhcLlUHFNu4pqpOKW0Rf+UQw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "blackpulse@noar-sserver.iam.gserviceaccount.com",
+  "client_id": "109457074395863673170",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/blackpulse%40noar-sserver.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
