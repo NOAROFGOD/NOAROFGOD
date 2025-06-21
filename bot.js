@@ -23,7 +23,7 @@ const client = new Client({
 
 const ADMIN_CHANNEL_ID = '1386017253467619540';
 const CATEGORY_ID = '1385950753763623062';
-const DONATOR_ROLE_ID = '1386003699444224160';
+const DONATOR_ROLE_ID = '1386018737005658273';
 const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
 
 const auth = new google.auth.GoogleAuth({
