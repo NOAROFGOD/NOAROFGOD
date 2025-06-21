@@ -187,7 +187,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
         await adminChannel.send({
-          content: `📥 ออเดอร์จาก <@${user.id}> - ${product.toUpperCase()} - ${price} บาท\nห้อง: <#${channel.id}>`,
+          content: `📥 ออเดอร์จาก <@${user.id}> - ${product.toUpperCase()} - ${price} บาท
+          ห้อง: <#${channel.id}>`,
           files: [slip],
           components: [
             new ActionRowBuilder().addComponents(
