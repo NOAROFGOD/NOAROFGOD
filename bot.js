@@ -202,7 +202,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           });
         } catch (err) {
           await channel.send(
-            '⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่โดยพิมพ์ `!shop`'
+            '⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่'
           );
           setTimeout(async () => {
             await guild.members.cache.get(user.id)?.roles.remove(role);
@@ -218,5 +218,88 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         // หา channel ห้องออเดอร์ลูกค้า
         const orderChannel = interaction.guild.channels.cache.find(
-        (ch) => ch.name === `📁-order-${userId}`
-       );
+          (ch) => ch.name === `📁-order-${userId}`
+        );
+
+        if (action === 'approve') {
+          const authClient = await auth.getClient();
+          const res = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: 'Sheet1!A2:B',
+          });
+
+          const rows = res.data.values || [];
+          const available = rows.find((row) => !row[1]);
+          if (!available)
+            return interaction.reply({
+              embeds: [
+                new EmbedBuilder()
+                  .setColor('Red')
+                  .setDescription('❌ ไม่พบคีย์ว่าง'),
+              ],
+              ephemeral: true,
+            });
+
+          const key = available[0];
+          const rowIndex = rows.findIndex((r) => r[0] === key) + 2;
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range: `Sheet1!B${rowIndex}`,
+            valueInputOption: 'RAW',
+            requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
+          });
+
+          await member.roles.add(DONATOR_ROLE_ID);
+
+          if (orderChannel) {
+            const embed = new EmbedBuilder()
+              .setTitle('✅ อนุมัติคำสั่งซื้อ')
+              .setDescription(
+                `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้ว~\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดีหากทำหายticketมาได้ครับ`
+              )
+              .setColor('Green');
+
+            await orderChannel.send({ embeds: [embed] });
+
+            setTimeout(async () => {
+              await member.roles.remove(
+                member.roles.cache.find((r) => r.name.startsWith('🛍️-'))
+              );
+              await orderChannel.delete();
+            }, 5 * 60 * 1000);
+          }
+          await interaction.deferUpdate();
+        } else if (action === 'reject') {
+          await interaction.reply({
+            content: 'กรุณาพิมพ์เหตุผลการยกเลิกภายใน 2 นาทีถัดไปในแชทนี้...',
+            ephemeral: true,
+          });
+
+          const filter = (m) => m.author.id === interaction.user.id;
+          const collected = await orderChannel
+            .awaitMessages({ filter, max: 1, time: 120000 })
+            .catch(() => {});
+          const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
+
+          if (orderChannel) {
+            await orderChannel.send({
+              content: `<@${userId}> ❌ คำสั่งซื้อถูกยกเลิกด้วยเหตุผล : ${reason}`,
+            });
+
+            setTimeout(async () => {
+              await member.roles.remove(
+                member.roles.cache.find((r) => r.name.startsWith('🛍️-'))
+              );
+              await orderChannel.delete();
+            }, 2 * 60 * 1000);
+          }
+          await interaction.deferUpdate();
+        }
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+client.login(process.env.TOKEN);
