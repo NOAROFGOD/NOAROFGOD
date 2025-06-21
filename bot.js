@@ -24,10 +24,10 @@ client.on('messageCreate', async msg => {
   if (msg.content === '!shop') {
     // สร้าง Embed เมนูหลัก
     const embed = new EmbedBuilder()
-      .setTitle('BlackPulse BoostFPS Shop')
-      .setDescription('กรุณาเลือกการกระทำจากปุ่มด้านล่าง')
+      .setTitle('BlackPulse CustomDLL Shop')
+      .setDescription('สามารถปรับแต่งไฟล์ได้เยอะโดยที่ไม่ต้องติดต่อแอดมิน ระบบจะทำให้ สะดวกสบายใช้งานง่าย24ชม.')
       .setColor(0x00ff00)
-      .setImage('https://i.imgur.com/yourimage.png'); // เปลี่ยนเป็น URL รูปจริง
+      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385928813560594524/IMG_7843.gif?ex=6857da4a&is=685688ca&hm=aab1506ad7227072f050b7ba7b72e52687e4912723e74c8011ad034c7edd1f1c&'); // เปลี่ยนเป็น URL รูปจริง
 
     // สร้างปุ่มสองปุ่ม
     const row = new ActionRowBuilder().addComponents(
@@ -137,7 +137,7 @@ client.on(Events.InteractionCreate, async interaction => {
     .setTitle('โปรดชำระเงิน 129 บาท')
     .setDescription('สแกน QR Code นี้เพื่อชำระเงิน แล้วกดปุ่มส่งหลักฐาน')
     .setColor(0x00ff00)
-    .setImage('attachment://promptpay.png');
+    .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385929780452655174/IMG_7844.jpg?ex=6857db30&is=685689b0&hm=31800af7885404557af9788d99c1b9dadb7535c7ff6979f1f879a23f0a92dd51&');
 
   // ปุ่มส่งหลักฐาน
   const row = new ActionRowBuilder().addComponents(
