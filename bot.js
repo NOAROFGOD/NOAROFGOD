@@ -36,7 +36,7 @@ const priceMap = {
 };
 
 // Google Sheets setup
-const SPREADSHEET_ID = '1bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw'; // แก้เป็น ID ชีทของเดียร์
+const SPREADSHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw'; // แก้เป็น ID ชีทของเดียร์
 const SHEET_NAME = 'Sheet1';
 
 const auth = new GoogleAuth({
