@@ -9,7 +9,7 @@ const client = new Client({
 const pendingOrders = new Map();
 
 // ใส่ช่องแชแนลแอดมินตรงนี้ (แก้เป็นจริง)
-const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID';
+const ADMIN_CHANNEL_ID = '1385924696301633596';
 
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
