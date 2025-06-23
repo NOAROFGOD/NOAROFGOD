@@ -35,7 +35,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 const pendingOrders = new Map();
 const priceMap = {
-  BestAimV1: 79,
+  BOOSTFPSV2: 49,
 };
 
 client.once('ready', () => {
