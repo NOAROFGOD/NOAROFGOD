@@ -35,7 +35,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 const pendingOrders = new Map();
 const priceMap = {
-  DLLBoostfpsV2: 129,
+  BestAimV1: 79,
 };
 
 client.once('ready', () => {
