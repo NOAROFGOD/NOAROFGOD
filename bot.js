@@ -11,6 +11,7 @@ const {
 } = require('discord.js');
 
 const { google } = require('googleapis');
+const { InteractionResponseFlags } = require('discord-api-types/v10');
 
 const client = new Client({
   intents: [
@@ -84,9 +85,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       pendingOrders.set(interaction.user.id, interaction.values[0]);
       await interaction.deferUpdate();
     } else if (interaction.isButton()) {
+      const [action, , userId] = interaction.customId.split('_');
+      const guild = interaction.guild;
+
       if (interaction.customId === 'confirm_order') {
         const user = interaction.user;
-        const guild = interaction.guild;
         const product = pendingOrders.get(user.id);
 
         if (!product)
@@ -96,10 +99,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 .setColor('Red')
                 .setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ'),
             ],
-            ephemeral: true,
+            flags: InteractionResponseFlags.Ephemeral,
           });
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
 
         const price = priceMap[product];
 
@@ -196,9 +199,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             components: [actionRow],
           });
         } catch (err) {
-          await channel.send(
-            '⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่'
-          );
+          await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่');
           setTimeout(async () => {
             const roleToRemove = guild.roles.cache.find(
               (r) => r.name === `🛍️-${user.username}`
@@ -207,96 +208,93 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await channel.delete();
           }, 5000);
         }
-      } else {
-        const [action, , userId] = interaction.customId.split('_');
-        if (!userId) return;
-
-        const member = await interaction.guild.members.fetch(userId);
-        const orderChannel = interaction.guild.channels.cache.find(
+      } else if (action === 'approve') {
+        const member = await guild.members.fetch(userId);
+        const orderChannel = guild.channels.cache.find(
           (ch) => ch.name === `📁-order-${userId}`
         );
 
-        if (action === 'approve') {
-          const authClient = await auth.getClient();
-          const res = await sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
-            range: 'Sheet1!A2:B',
+        const authClient = await auth.getClient();
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: SHEET_ID,
+          range: 'Sheet1!A2:B',
+        });
+
+        const rows = res.data.values || [];
+        const available = rows.find((row) => !row[1]);
+        if (!available)
+          return interaction.reply({
+            embeds: [
+              new EmbedBuilder().setColor('Red').setDescription('❌ ไม่พบคีย์ว่าง'),
+            ],
+            flags: InteractionResponseFlags.Ephemeral,
           });
 
-          const rows = res.data.values || [];
-          const available = rows.find((row) => !row[1]);
-          if (!available)
-            return interaction.reply({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor('Red')
-                  .setDescription('❌ ไม่พบคีย์ว่าง'),
-              ],
-              ephemeral: true,
-            });
+        const key = available[0];
+        const rowIndex = rows.findIndex((r) => r[0] === key) + 2;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: `Sheet1!B${rowIndex}`,
+          valueInputOption: 'RAW',
+          requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
+        });
 
-          const key = available[0];
-          const rowIndex = rows.findIndex((r) => r[0] === key) + 2;
-          await sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: `Sheet1!B${rowIndex}`,
-            valueInputOption: 'RAW',
-            requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
-          });
+        await member.roles.add(DONATOR_ROLE_ID);
 
-          await member.roles.add(DONATOR_ROLE_ID);
+        if (orderChannel) {
+          const embed = new EmbedBuilder()
+            .setTitle('✅ อนุมัติคำสั่งซื้อ')
+            .setDescription(
+              `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้วค่ะ\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
+            )
+            .setColor('Green');
 
-          if (orderChannel) {
-            const embed = new EmbedBuilder()
-              .setTitle('✅ อนุมัติคำสั่งซื้อ')
-              .setDescription(
-                `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้วค่ะ\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
-              )
-              .setColor('Green');
+          await orderChannel.send({ embeds: [embed] });
 
-            await orderChannel.send({ embeds: [embed] });
-
-            setTimeout(async () => {
-              const roleToRemove = member.roles.cache.find((r) =>
-                r.name.startsWith('🛍️-')
-              );
-              if (roleToRemove) await member.roles.remove(roleToRemove);
-              await orderChannel.delete();
-            }, 5 * 60 * 1000);
-          }
-          await interaction.deferUpdate();
-        } else if (action === 'reject') {
-          await interaction.reply({
-            content: 'ใส่เหตุผลที่ยกเลิก',
-            ephemeral: true,
-          });
-
-          const filter = (m) => m.author.id === interaction.user.id;
-
-          const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-          const collected = await adminChannel.awaitMessages({
-            filter,
-            max: 1,
-            time: 120000,
-          }).catch(() => {});
-
-          const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
-
-          if (orderChannel) {
-            await orderChannel.send({
-              content: `❌ คำสั่งซื้อของคุณถูกยกเลิกด้วยเหตุผล : ${reason}`,
-            });
-
-            setTimeout(async () => {
-              const roleToRemove = member.roles.cache.find((r) =>
-                r.name.startsWith('🛍️-')
-              );
-              if (roleToRemove) await member.roles.remove(roleToRemove);
-              await orderChannel.delete();
-            }, 2 * 60 * 1000);
-          }
-          await interaction.deferUpdate();
+          setTimeout(async () => {
+            const roleToRemove = member.roles.cache.find((r) =>
+              r.name.startsWith('🛍️-')
+            );
+            if (roleToRemove) await member.roles.remove(roleToRemove);
+            await orderChannel.delete();
+          }, 5 * 60 * 1000);
         }
+        await interaction.deferUpdate();
+      } else if (action === 'reject') {
+        await interaction.reply({
+          content: 'ใส่เหตุผลที่ยกเลิก',
+          flags: InteractionResponseFlags.Ephemeral,
+        });
+
+        const filter = (m) => m.author.id === interaction.user.id;
+
+        const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
+        const collected = await adminChannel.awaitMessages({
+          filter,
+          max: 1,
+          time: 120000,
+        }).catch(() => {});
+
+        const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
+        const member = await guild.members.fetch(userId);
+        const orderChannel = guild.channels.cache.find(
+          (ch) => ch.name === `📁-order-${userId}`
+        );
+
+        if (orderChannel) {
+          await orderChannel.send({
+            content: `❌ คำสั่งซื้อของคุณถูกยกเลิกด้วยเหตุผล : ${reason}`,
+          });
+
+          setTimeout(async () => {
+            const roleToRemove = member.roles.cache.find((r) =>
+              r.name.startsWith('🛍️-')
+            );
+            if (roleToRemove) await member.roles.remove(roleToRemove);
+            await orderChannel.delete();
+          }, 2 * 60 * 1000);
+        }
+        await interaction.deferUpdate();
       }
     }
   } catch (err) {
