@@ -81,23 +81,21 @@ client.on('messageCreate', async (msg) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
-    // เลือกสินค้า
+    // เลือกสินค้า ไม่ตอบอะไรเลย (ไม่มี deferUpdate, reply)
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_product') {
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      return interaction.deferUpdate();
+      return; // เงียบๆ
     }
 
     if (!interaction.isButton()) return;
 
-    // กดปุ่มสั่งซื้อ
     if (interaction.customId === 'confirm_order') {
       await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
       const product = pendingOrders.get(interaction.user.id);
       if (!product) {
-        return interaction.editReply({
+        return await interaction.editReply({
           embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ')],
-          flags: EPHEMERAL_FLAG,
         });
       }
 
@@ -118,11 +116,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return interaction.editReply({
         embeds: [productEmbed],
         components: [new ActionRowBuilder().addComponents(payConfirmButton)],
-        flags: EPHEMERAL_FLAG,
       });
     }
 
-    // กดแจ้งชำระเงิน
     if (interaction.customId.startsWith('user_paid_')) {
       await interaction.deferUpdate();
 
@@ -154,7 +150,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    // กดอนุมัติคำสั่งซื้อ
     if (interaction.customId.startsWith('approve_order_')) {
       await interaction.deferUpdate();
 
@@ -212,7 +207,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // กดยกเลิกคำสั่งซื้อ
     if (interaction.customId.startsWith('reject_order_')) {
       await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
