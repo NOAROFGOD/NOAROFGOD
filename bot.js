@@ -38,6 +38,8 @@ const priceMap = {
   BetterFiveM: 49,
 };
 
+const EPHEMERAL_FLAG = 1 << 6; // 64
+
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
 });
@@ -83,8 +85,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.customId !== 'select_product') return;
 
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      // ตอบกลับเพื่อให้รู้ว่ากดเลือกแล้ว
-      await interaction.reply({ content: '✅ เลือกสินค้าเรียบร้อย', ephemeral: true });
+      await interaction.reply({ content: '✅ เลือกสินค้าเรียบร้อย', flags: EPHEMERAL_FLAG });
 
     } else if (interaction.isButton()) {
       const [action, , userId] = interaction.customId.split('_');
@@ -101,11 +102,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 .setColor('Red')
                 .setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ'),
             ],
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
         const price = priceMap[product];
 
@@ -233,7 +234,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             embeds: [
               new EmbedBuilder().setColor('Red').setDescription('❌ ไม่พบคีย์ว่าง'),
             ],
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
 
@@ -271,7 +272,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         await interaction.followUp({
           content: 'ใส่เหตุผลที่ยกเลิก',
-          ephemeral: true,
+          flags: EPHEMERAL_FLAG,
         });
 
         const filter = (m) => m.author.id === interaction.user.id;
