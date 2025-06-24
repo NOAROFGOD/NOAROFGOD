@@ -101,7 +101,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
         const role = await guild.roles.create({
           name: `🛍️-${user.username}`,
