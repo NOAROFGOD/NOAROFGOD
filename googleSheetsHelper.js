@@ -3,8 +3,8 @@ const { google } = require('googleapis');
 const path = require('path');
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const CREDENTIALS_PATH = path.join(__dirname, 'credentials.json');
-const SPREADSHEET_ID = 'ใส่Spreadsheet ID ที่นี่';
+const CREDENTIALS_PATH = path.join(__dirname, 'noar-sserver-9c0924c3819f.json');
+const SPREADSHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
 
 let sheetsClient;
 
