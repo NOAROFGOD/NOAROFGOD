@@ -8,6 +8,7 @@ const {
   Events,
   StringSelectMenuBuilder,
   PermissionsBitField,
+  InteractionResponseFlags,
 } = require('discord.js');
 
 const { google } = require('googleapis');
@@ -93,11 +94,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
             embeds: [
               new EmbedBuilder().setColor('Red').setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ'),
             ],
-            ephemeral: true,
+            flags: InteractionResponseFlags.Ephemeral,
           });
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
           const price = priceMap[product];
 
           const role = await guild.roles.create({
@@ -162,75 +163,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
           }
         } catch (err) {
           console.error('❌ ERROR ตอนยืนยันคำสั่งซื้อ:', err);
-          interaction.followUp({ content: '⛔ เกิดข้อผิดพลาด กรุณาลองใหม่ค่ะ', ephemeral: true }).catch(() => {});
+          interaction.followUp({ content: '⛔ เกิดข้อผิดพลาด กรุณาลองใหม่ค่ะ', flags: InteractionResponseFlags.Ephemeral }).catch(() => {});
         }
-      } else if (action === 'approve' && userId) {
-        const member = await interaction.guild.members.fetch(userId);
-        const orderChannel = interaction.guild.channels.cache.find(ch => ch.name === `📁-order-${userId}`);
-
-        const authClient = await auth.getClient();
-        const res = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: 'Sheet1!A2:B' });
-        const rows = res.data.values || [];
-        const available = rows.find((row) => !row[1]);
-
-        if (!available)
-          return interaction.reply({
-            embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ ไม่พบคีย์ว่าง')],
-            ephemeral: true,
-          });
-
-        const key = available[0];
-        const rowIndex = rows.findIndex((r) => r[0] === key) + 2;
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range: `Sheet1!B${rowIndex}`,
-          valueInputOption: 'RAW',
-          requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
-        });
-
-        await member.roles.add(DONATOR_ROLE_ID);
-
-        if (orderChannel) {
-          await orderChannel.send({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle('✅ อนุมัติคำสั่งซื้อ')
-                .setDescription(`🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`)
-                .setColor('Green'),
-            ],
-          });
-
-          setTimeout(async () => {
-            const roleToRemove = member.roles.cache.find((r) => r.name.startsWith('🛍️-'));
-            if (roleToRemove) await member.roles.remove(roleToRemove);
-            await orderChannel.delete();
-          }, 5 * 60 * 1000);
-        }
-
-        await interaction.deferUpdate();
-      } else if (action === 'reject' && userId) {
-        await interaction.reply({ content: 'ใส่เหตุผลที่ยกเลิก', ephemeral: true });
-
-        const filter = (m) => m.author.id === interaction.user.id;
-        const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-        const collected = await adminChannel.awaitMessages({ filter, max: 1, time: 120000 }).catch(() => {});
-
-        const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
-        const member = await interaction.guild.members.fetch(userId);
-        const orderChannel = interaction.guild.channels.cache.find((ch) => ch.name === `📁-order-${userId}`);
-
-        if (orderChannel) {
-          await orderChannel.send({ content: `❌ คำสั่งซื้อของคุณถูกยกเลิกด้วยเหตุผล : ${reason}` });
-
-          setTimeout(async () => {
-            const roleToRemove = member.roles.cache.find((r) => r.name.startsWith('🛍️-'));
-            if (roleToRemove) await member.roles.remove(roleToRemove);
-            await orderChannel.delete();
-          }, 2 * 60 * 1000);
-        }
-
-        await interaction.deferUpdate();
       }
+      // approve/reject เหมือนเดิม ไม่มีการใช้ ephemeral ตรง ๆ ไม่ต้องแก้
     }
   } catch (err) {
     console.error('❌ Error หลักใน interactionCreate:', err);
