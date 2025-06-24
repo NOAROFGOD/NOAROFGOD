@@ -21,6 +21,7 @@ const client = new Client({
 });
 
 const priceMap = { BetterFiveM: 49 };
+const pendingOrders = new Map();
 
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
@@ -59,6 +60,40 @@ client.on('messageCreate', async (msg) => {
         new ActionRowBuilder().addComponents(button),
       ],
     });
+  }
+});
+
+client.on(Events.InteractionCreate, async (interaction) => {
+  try {
+    if (interaction.isStringSelectMenu() && interaction.customId === 'select_product') {
+      pendingOrders.set(interaction.user.id, interaction.values[0]);
+      await interaction.deferUpdate();
+    }
+
+    if (interaction.isButton() && interaction.customId === 'confirm_order') {
+      const user = interaction.user;
+      const product = pendingOrders.get(user.id);
+
+      if (!product) {
+        return await interaction.reply({ content: '❌ กรุณาเลือกสินค้าก่อนนะคะ', ephemeral: true });
+      }
+
+      const payButton = new ButtonBuilder()
+        .setCustomId(`user_paid_${user.id}_${product}`)
+        .setLabel('📤 แจ้งชำระเงิน')
+        .setStyle(ButtonStyle.Primary);
+
+      await interaction.reply({
+        content: `🧾 สั่งซื้อ: ${product.toUpperCase()}
+💰 ราคา: ${priceMap[product]} บาท
+📌 โปรดสแกน QR นี้เพื่อชำระเงิน:
+https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg`,
+        components: [new ActionRowBuilder().addComponents(payButton)],
+        ephemeral: true,
+      });
+    }
+  } catch (err) {
+    console.error('❌ Error:', err);
   }
 });
 
