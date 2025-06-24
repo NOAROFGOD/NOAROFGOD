@@ -18,7 +18,7 @@ const PRODUCTS = {
     price: 49,
     description: 'BoostFPS + ค่าดำติดเครื่อง',
     emoji: '🚀',
-    image: 'https://yourcdn.com/betterfivem-banner.png',
+    image: 'https://cdn.discordapp.com/attachments/1384470774668197998/1387217235478581348/IMG_7845.jpg?ex=685c8a3a&is=685b38ba&hm=97ec6e554ccce5bfde42d2783ec00807677ad3ebdb9623a294e44f2c26fe197b&',
     qr: 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=685bfe18&is=685aac98&hm=d1694cf36c2937e636ddc1ab09533d3b424e0cb9197a7280afdc901877bef0dd&'
   }
 };
@@ -66,8 +66,8 @@ client.on(Events.MessageCreate, async (msg) => {
   }));
 
   const embed = new EmbedBuilder()
-    .setTitle('🔥 ร้านค้า NOAR NEVERDIE')
-    .setDescription('🚀 ระบบ BoostFPS สำหรับ FiveM พร้อมส่งคีย์ทันทีหลังชำระ')
+    .setTitle('NOAR SHOP')
+    .setDescription('บอท24/7 ระบบอัตโนมัติ โปรดเลือกสินค้าที่คุณต้องการ')
     .setColor(0x00ae86)
     .setImage(PRODUCTS.betterfivem.image);
 
