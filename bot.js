@@ -1,57 +1,80 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, EmbedBuilder,
-  ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const creds = require('./noar-sserver-9c0924c3819f.json'); // 👈 ไฟล์ JSON จาก Google
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, Events } = require('discord.js');
+const { google } = require('googleapis');
 
-// ======= ค่าคงที่ =======
-const PREFIX = '!';
-const TOKEN = process.env.TOKEN;
-
-// แก้ตรงนี้ตามของโนอา 👇
-const QR_IMAGE = 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=685bfe18&is=685aac98&hm=d1694cf36c2937e636ddc1ab09533d3b424e0cb9197a7280afdc901877bef0dd&';
-const ADMIN_CHANNEL_ID = '1386017253467619540';
-const ROLE_ID = '1386018737005658273';
-const SPREADSHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
-
-// ======= Google Sheet =======
-const doc = new GoogleSpreadsheet(SPREADSHEET_ID);
-async function accessSheet() {
-  await doc.useServiceAccountAuth({
-    client_email: creds.client_email,
-    private_key: creds.private_key,
-  });
-  await doc.loadInfo();
-}
-
-// ======= Discord Client =======
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
   partials: [Partials.Channel],
 });
 
-client.once('ready', () => {
-  console.log(`✅ บอทพร้อมใช้งาน: ${client.user.tag}`);
+// CONFIG
+const ADMIN_CHANNEL_ID = '1386017253467619540'; // 💬 แก้เป็นช่องแจ้งแอดมิน
+const ROLE_ID = '1386018737005658273'; // 🏷️ Role ที่จะเพิ่มให้ลูกค้า
+const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw'; // 📄 Spreadsheet ID ของ Google Sheet
+
+const PRODUCTS = {
+  betterfivem: {
+    label: '⚡ BetterFiveM - 49 บาท',
+    price: 49,
+    description: 'BoostFPS + ค่าดำติดเครื่อง',
+    emoji: '🚀',
+    image: 'https://yourcdn.com/betterfivem-banner.png',
+    qr: 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=685bfe18&is=685aac98&hm=d1694cf36c2937e636ddc1ab09533d3b424e0cb9197a7280afdc901877bef0dd&'
+  }
+};
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: 'YOUR-CREDS-FILE.json',
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-// ======= !shop คำสั่งเปิดร้าน =======
-client.on('messageCreate', async (msg) => {
-  if (!msg.content.startsWith(PREFIX) || msg.author.bot) return;
-  const command = msg.content.slice(PREFIX.length).trim().toLowerCase();
-  if (command !== 'shop') return;
+const userSelections = new Map();
+
+// 🟩 ฟังก์ชันดึงคีย์จาก Google Sheet
+async function getAvailableKey(product) {
+  const client = await auth.getClient();
+  const sheets = google.sheets({ version: 'v4', auth: client });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'A2:C1000',
+  });
+
+  const rows = res.data.values;
+  const rowIndex = rows.findIndex(r => r[1] !== 'yes' && r[2] === product);
+  if (rowIndex === -1) return null;
+  const key = rows[rowIndex][0];
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `B${rowIndex + 2}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [['yes']] },
+  });
+
+  return key;
+}
+
+// 🔘 คำสั่ง !shop
+client.on(Events.MessageCreate, async (msg) => {
+  if (!msg.content.startsWith('!shop')) return;
+
+  const productOptions = Object.entries(PRODUCTS).map(([key, p]) => ({
+    label: p.label,
+    value: key,
+    description: p.description,
+    emoji: p.emoji
+  }));
 
   const embed = new EmbedBuilder()
-    .setTitle('🛍️ ร้านค้าโนอา')
-    .setDescription('เลือกสินค้าจากเมนู แล้วกดปุ่ม 📦 เพื่อสั่งซื้อ')
-    .setColor(0x00ae86);
+    .setTitle('🔥 ร้านค้า NOAR NEVERDIE')
+    .setDescription('🚀 ระบบ BoostFPS สำหรับ FiveM พร้อมส่งคีย์ทันทีหลังชำระ')
+    .setColor(0x00ae86)
+    .setImage(PRODUCTS.betterfivem.image);
 
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId('select_product')
     .setPlaceholder('เลือกสินค้าที่ต้องการ')
-    .addOptions([
-      { label: '🎁 Nitro 1 เดือน', value: 'nitro1' },
-      { label: '🎮 เกม Steam', value: 'steamgame' }
-    ]);
+    .addOptions(productOptions);
 
   const orderBtn = new ButtonBuilder()
     .setCustomId('buy_button')
@@ -67,105 +90,94 @@ client.on('messageCreate', async (msg) => {
   });
 });
 
-// ======= Interactions =======
-client.on('interactionCreate', async (interaction) => {
-  // 1. เลือกสินค้า
+// 🎯 จัดการปุ่มและ dropdown
+client.on(Events.InteractionCreate, async (interaction) => {
+  const id = interaction.customId;
+
   if (interaction.isStringSelectMenu()) {
-    return interaction.reply({ content: `✅ คุณเลือก: **${interaction.values[0]}**`, ephemeral: true });
+    const selected = interaction.values[0];
+    userSelections.set(interaction.user.id, selected);
+    return;
   }
 
-  // 2. ลูกค้ากดปุ่ม "สั่งซื้อ" → โชว์ QR
-  if (interaction.isButton()) {
-    const id = interaction.customId;
-
-    if (id === 'buy_button') {
-      const embed = new EmbedBuilder()
-        .setTitle('🔔 กรุณาชำระเงิน')
-        .setDescription('สแกน QR ด้านล่าง แล้วกด "แจ้งชำระเงินสำเร็จ"')
-        .setImage(QR_IMAGE);
-
-      const confirmBtn = new ButtonBuilder()
-        .setCustomId('confirm_pay')
-        .setLabel('⚡ แจ้งชำระเงินสำเร็จ')
-        .setStyle(ButtonStyle.Success);
-
-      return interaction.reply({
-        embeds: [embed],
-        components: [new ActionRowBuilder().addComponents(confirmBtn)],
-        ephemeral: true
-      });
+  if (id === 'buy_button') {
+    const productKey = userSelections.get(interaction.user.id);
+    const product = PRODUCTS[productKey];
+    if (!product) {
+      return interaction.reply({ content: '⚠️ กรุณาเลือกสินค้าก่อนสั่งซื้อ', ephemeral: true });
     }
 
-    // 3. ลูกค้ากด "แจ้งชำระ" → แจ้งแอดมิน
-    if (id === 'confirm_pay') {
-      const adminChan = await client.channels.fetch(ADMIN_CHANNEL_ID);
-      const embed = new EmbedBuilder()
-        .setTitle('💰 แจ้งชำระเงินใหม่')
-        .setDescription(`จาก: ${interaction.user.tag} (${interaction.user.id})`);
+    const embed = new EmbedBuilder()
+      .setTitle(`🔔 ชำระเงินสำหรับ ${product.label}`)
+      .setDescription(`📌 ยอดที่ต้องชำระ: **${product.price} บาท**\n\nสแกน QR ด้านล่าง แล้วกดปุ่ม "แจ้งชำระเงินสำเร็จ"`)
+      .setImage(product.qr)
+      .setColor(0x2ecc71);
 
-      const confirm = new ButtonBuilder()
-        .setCustomId(`admin_confirm_${interaction.user.id}`)
-        .setLabel('✅ ยืนยัน')
-        .setStyle(ButtonStyle.Success);
+    const confirmBtn = new ButtonBuilder()
+      .setCustomId('confirm_pay')
+      .setLabel('⚡ แจ้งชำระเงินสำเร็จ')
+      .setStyle(ButtonStyle.Success);
 
-      const cancel = new ButtonBuilder()
-        .setCustomId(`admin_cancel_${interaction.user.id}`)
-        .setLabel('❌ ยกเลิก')
-        .setStyle(ButtonStyle.Danger);
+    return interaction.reply({
+      embeds: [embed],
+      components: [new ActionRowBuilder().addComponents(confirmBtn)],
+      ephemeral: true
+    });
+  }
 
-      await adminChan.send({
-        embeds: [embed],
-        components: [new ActionRowBuilder().addComponents(confirm, cancel)]
-      });
+  if (id === 'confirm_pay') {
+    const productKey = userSelections.get(interaction.user.id);
+    const product = PRODUCTS[productKey];
+    if (!product) return interaction.reply({ content: '❌ ไม่พบข้อมูลสินค้า', ephemeral: true });
 
-      return interaction.reply({ content: '📤 แจ้งชำระแล้ว รอแอดมินตรวจสอบจ้า', ephemeral: true });
-    }
+    const date = new Date();
+    date.setHours(date.getHours() + 7); // GMT+7
+    const paidAt = date.toLocaleString('th-TH', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
 
-    // 4. แอดมินกด "ยกเลิก" หรือ "ยืนยัน"
-    if (id.startsWith('admin_cancel_') || id.startsWith('admin_confirm_')) {
-      const action = id.includes('cancel') ? 'cancel' : 'confirm';
-      const userId = id.split('_')[2];
-      const user = await client.users.fetch(userId);
+    const embed = new EmbedBuilder()
+      .setTitle(`💰 แจ้งชำระเงินใหม่ - ${product.label}`)
+      .setDescription(`จาก: ${interaction.user.tag} (${interaction.user.id})`)
+      .addFields(
+        { name: '📅 วันที่ชำระ', value: paidAt, inline: true },
+        { name: '💵 จำนวนเงิน', value: `${product.price} บาท`, inline: true }
+      )
+      .setThumbnail(product.image)
+      .setColor(0xf1c40f);
 
-      if (action === 'cancel') {
-        await interaction.reply({ content: '📝 พิมพ์เหตุผลในการยกเลิกภายใน 1 นาที', ephemeral: true });
-        const collected = await interaction.channel.awaitMessages({
-          filter: m => m.author.id === interaction.user.id,
-          max: 1,
-          time: 60000
-        });
+    const confirm = new ButtonBuilder()
+      .setCustomId(`admin_confirm_${interaction.user.id}`)
+      .setLabel('✅ ยืนยัน')
+      .setStyle(ButtonStyle.Success);
 
-        const reason = collected.first()?.content || 'ไม่ระบุเหตุผล';
-        await user.send(`❌ คำสั่งซื้อของคุณถูกยกเลิก: ${reason}`);
-        return interaction.editReply({ content: `❌ ยกเลิกสำเร็จ`, components: [] });
-      }
+    const cancel = new ButtonBuilder()
+      .setCustomId(`admin_cancel_${interaction.user.id}`)
+      .setLabel('❌ ยกเลิก')
+      .setStyle(ButtonStyle.Danger);
 
-      if (action === 'confirm') {
-        await accessSheet();
-        const sheet = doc.sheetsByIndex[0];
-        const rows = await sheet.getRows();
-        const row = rows.find(r => !r.used);
+    await client.channels.cache.get(ADMIN_CHANNEL_ID).send({
+      embeds: [embed],
+      components: [new ActionRowBuilder().addComponents(confirm, cancel)]
+    });
 
-        if (!row) {
-          await user.send('❗ ขอโทษค่ะ คีย์สินค้าหมดแล้ว 😢');
-          return interaction.reply({ content: '❗ ไม่มีคีย์เหลือในชีต', ephemeral: true });
-        }
+    return interaction.reply({ content: '📤 แจ้งชำระแล้ว รอแอดมินตรวจสอบนะคะ', ephemeral: true });
+  }
 
-        const key = row.key;
-        row.used = true;
-        await row.save();
+  if (id.startsWith('admin_confirm_')) {
+    const userId = id.split('_')[2];
+    const productKey = userSelections.get(userId);
+    const product = PRODUCTS[productKey];
+    const key = await getAvailableKey(productKey);
+    if (!key) return interaction.reply({ content: '❌ ไม่พบคีย์ในระบบ', ephemeral: true });
 
-        await user.send(`✅ ยืนยันแล้ว! คีย์ของคุณ:\n\`${key}\``);
+    const member = await interaction.guild.members.fetch(userId);
+    await member.send(`🔑 ขอบคุณสำหรับการสั่งซื้อ **${product.label}**\n\nคีย์ของคุณคือ:\n\`\`\`${key}\`\`\``).catch(console.error);
+    await member.roles.add(ROLE_ID).catch(console.error);
 
-        const guild = interaction.guild;
-        const member = guild.members.cache.get(userId);
-        if (member) await member.roles.add(ROLE_ID).catch(console.error);
-
-        return interaction.reply({ content: '✅ ส่งคีย์เรียบร้อย', ephemeral: true });
-      }
-    }
+    return interaction.reply({ content: `✅ ส่งคีย์ให้ <@${userId}> เรียบร้อย`, ephemeral: true });
   }
 });
 
-// ======= เปิดใช้งาน =======
-client.login(TOKEN);
+client.login(process.env.TOKEN);
