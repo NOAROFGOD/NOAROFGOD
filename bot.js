@@ -9,10 +9,10 @@ const PREFIX = '!';
 const TOKEN = process.env.TOKEN;
 
 // แก้ตรงนี้ตามของโนอา 👇
-const QR_IMAGE = 'https://yourhost.com/qr.png';
-const ADMIN_CHANNEL_ID = '123456789012345678';
-const ROLE_ID = '987654321098765432';
-const SPREADSHEET_ID = '1AbCdEfGHIjklMNopQRstuVWXYZ';
+const QR_IMAGE = 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=685bfe18&is=685aac98&hm=d1694cf36c2937e636ddc1ab09533d3b424e0cb9197a7280afdc901877bef0dd&';
+const ADMIN_CHANNEL_ID = '1386017253467619540';
+const ROLE_ID = '1386018737005658273';
+const SPREADSHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
 
 // ======= Google Sheet =======
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID);
