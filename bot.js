@@ -81,8 +81,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId !== 'select_product') return;
+
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      await interaction.deferUpdate();
+      // ตอบกลับเพื่อให้รู้ว่ากดเลือกแล้ว
+      await interaction.reply({ content: '✅ เลือกสินค้าเรียบร้อย', ephemeral: true });
+
     } else if (interaction.isButton()) {
       const [action, , userId] = interaction.customId.split('_');
       const guild = interaction.guild;
@@ -91,7 +94,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const user = interaction.user;
         const product = pendingOrders.get(user.id);
 
-        if (!product)
+        if (!product) {
           return interaction.reply({
             embeds: [
               new EmbedBuilder()
@@ -100,6 +103,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             ],
             ephemeral: true,
           });
+        }
 
         await interaction.deferReply({ ephemeral: true });
 
@@ -207,11 +211,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await channel.delete();
           }, 5000);
         }
+
       } else if (action === 'approve') {
         const member = await guild.members.fetch(userId);
         const orderChannel = guild.channels.cache.find(
           (ch) => ch.name === `📁-order-${userId}`
         );
+
+        await interaction.deferUpdate();
 
         const authClient = await auth.getClient();
         const res = await sheets.spreadsheets.values.get({
@@ -221,13 +228,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         const rows = res.data.values || [];
         const available = rows.find((row) => !row[1]);
-        if (!available)
-          return interaction.reply({
+        if (!available) {
+          return interaction.followUp({
             embeds: [
               new EmbedBuilder().setColor('Red').setDescription('❌ ไม่พบคีย์ว่าง'),
             ],
             ephemeral: true,
           });
+        }
 
         const key = available[0];
         const rowIndex = rows.findIndex((r) => r[0] === key) + 2;
@@ -258,9 +266,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await orderChannel.delete();
           }, 5 * 60 * 1000);
         }
-        await interaction.deferUpdate();
       } else if (action === 'reject') {
-        await interaction.reply({
+        await interaction.deferUpdate();
+
+        await interaction.followUp({
           content: 'ใส่เหตุผลที่ยกเลิก',
           ephemeral: true,
         });
@@ -275,6 +284,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         }).catch(() => {});
 
         const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
+
         const member = await guild.members.fetch(userId);
         const orderChannel = guild.channels.cache.find(
           (ch) => ch.name === `📁-order-${userId}`
@@ -293,7 +303,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
             await orderChannel.delete();
           }, 2 * 60 * 1000);
         }
-        await interaction.deferUpdate();
       }
     }
   } catch (err) {
