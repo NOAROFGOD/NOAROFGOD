@@ -22,7 +22,7 @@ const client = new Client({
 
 const priceMap = { BetterFiveM: 49 };
 const pendingOrders = new Map();
-const EPHEMERAL_FLAG = 1 << 6; // ใช้แทน ephemeral: true (deprecated)
+const EPHEMERAL_FLAG = 1 << 6; // แทน ephemeral: true
 
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
@@ -43,11 +43,13 @@ client.on('messageCreate', async (msg) => {
     const select = new StringSelectMenuBuilder()
       .setCustomId('select_product')
       .setPlaceholder('📦 เลือกสินค้า')
-      .addOptions(Object.entries(priceMap).map(([key, price]) => ({
-        label: key.toUpperCase(),
-        value: key,
-        description: `${price} บาท`
-      })));
+      .addOptions(
+        Object.entries(priceMap).map(([key, price]) => ({
+          label: key.toUpperCase(),
+          value: key,
+          description: `${price} บาท`,
+        }))
+      );
 
     const button = new ButtonBuilder()
       .setCustomId('confirm_order')
@@ -76,7 +78,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const product = pendingOrders.get(user.id);
 
       if (!product) {
-        return await interaction.reply({ content: '❌ กรุณาเลือกสินค้าก่อนนะคะ', flags: EPHEMERAL_FLAG });
+        return await interaction.reply({
+          content: '❌ กรุณาเลือกสินค้าก่อนนะคะ',
+          flags: EPHEMERAL_FLAG,
+        });
       }
 
       const payButton = new ButtonBuilder()
@@ -84,16 +89,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
         .setLabel('📤 แจ้งชำระเงิน')
         .setStyle(ButtonStyle.Primary);
 
-      const message = `
-╭───────────────
-│ 🧾 สั่งซื้อ: ${product.toUpperCase()}
-│ 💰 ราคา: ${priceMap[product]} บาท
-│ 📌 สแกน QR นี้เพื่อชำระเงิน:
-╰───────────────
-https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg`;
+      const embed = {
+        title: '🧾 รายละเอียดการชำระเงิน',
+        description: `**สินค้า:** ${product.toUpperCase()}\n**ราคา:** ${priceMap[product]} บาท\n\nโปรดสแกน QR ด้านล่างเพื่อชำระเงิน แล้วกดปุ่มแจ้งชำระเงิน`,
+        color: 0x00ccff,
+        image: {
+          url: 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg',
+        },
+      };
 
       await interaction.reply({
-        content: message,
+        embeds: [embed],
         components: [new ActionRowBuilder().addComponents(payButton)],
         flags: EPHEMERAL_FLAG,
       });
