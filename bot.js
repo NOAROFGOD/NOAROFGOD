@@ -17,7 +17,7 @@ const sheets = google.sheets('v4');
 const TOKEN = process.env.TOKEN;
 const ADMIN_CHANNEL_ID = '1386017253467619540'; // ช่องแจ้งเตือนแอดมิน
 const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
-const GOOGLE_API_CREDENTIALS = require('./noar-sserver-9c0924c3819.json');
+const GOOGLE_API_CREDENTIALS = require('./noar-sserver-9c0924c3819f.json');
 const EPHEMERAL_FLAG = 1 << 6;
 
 const client = new Client({
