@@ -7,10 +7,7 @@ const {
   StringSelectMenuBuilder,
   Events,
   PermissionsBitField,
-  EmbedBuilder,
-  Partials,
 } = require('discord.js');
-
 const { google } = require('googleapis');
 
 const client = new Client({
@@ -20,7 +17,6 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
   ],
-  partials: [Partials.Channel],
 });
 
 const ADMIN_CHANNEL_ID = '1386017253467619540';
@@ -36,15 +32,16 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 const priceMap = { BetterFiveM: 49 };
 const pendingOrders = new Map();
-const EPHEMERAL_FLAG = 1 << 6; // แทน ephemeral: true
+
+const EPHEMERAL_FLAG = 1 << 6; // ephemeral
 
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
 });
 
-// สร้างเมนูสินค้า + ปุ่มสั่งซื้อ
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
+
   if (msg.content === '!createmenu') {
     const embed = {
       title: '🛍️ BlackPulse Shop',
@@ -58,11 +55,13 @@ client.on('messageCreate', async (msg) => {
     const select = new StringSelectMenuBuilder()
       .setCustomId('select_product')
       .setPlaceholder('📦 เลือกสินค้า')
-      .addOptions(Object.entries(priceMap).map(([key, price]) => ({
-        label: key.toUpperCase(),
-        value: key,
-        description: `${price} บาท`,
-      })));
+      .addOptions(
+        Object.entries(priceMap).map(([key, price]) => ({
+          label: key.toUpperCase(),
+          value: key,
+          description: `${price} บาท`,
+        }))
+      );
 
     const button = new ButtonBuilder()
       .setCustomId('confirm_order')
@@ -81,188 +80,204 @@ client.on('messageCreate', async (msg) => {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
-    // เลือกสินค้า เก็บใน pendingOrders (ไม่ตอบ reply เพื่อไม่ให้ interaction หมดอายุเร็ว)
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_product') {
+      // เซฟสินค้าไว้รอดีเลย์ตอบ
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      // deferUpdate() = ตอบแบบเงียบๆ ไม่แจ้ง user (เปลี่ยนชื่อสินค้าเฉย ๆ)
-      return interaction.deferUpdate();
-    }
+      await interaction.deferUpdate();
+    } else if (interaction.isButton()) {
+      // ปุ่มสั่งซื้อ
+      if (interaction.customId === 'confirm_order') {
+        const user = interaction.user;
+        const product = pendingOrders.get(user.id);
 
-    // กดปุ่มสั่งซื้อ
-    if (interaction.isButton() && interaction.customId === 'confirm_order') {
-      const user = interaction.user;
-      const product = pendingOrders.get(user.id);
+        if (!product) {
+          if (!interaction.replied && !interaction.deferred) {
+            return await interaction.reply({
+              content: '❌ กรุณาเลือกสินค้าก่อนนะคะ',
+              flags: EPHEMERAL_FLAG,
+            });
+          } else {
+            return await interaction.followUp({
+              content: '❌ กรุณาเลือกสินค้าก่อนนะคะ',
+              flags: EPHEMERAL_FLAG,
+            });
+          }
+        }
 
-      if (!product) {
-        return interaction.reply({
-          content: '❌ กรุณาเลือกสินค้าก่อนนะคะ',
-          flags: EPHEMERAL_FLAG,
-        });
-      }
+        const payButton = new ButtonBuilder()
+          .setCustomId(`user_paid_${user.id}_${product}`)
+          .setLabel('📤 แจ้งชำระเงิน')
+          .setStyle(ButtonStyle.Primary);
 
-      // ส่งข้อความให้สแกน QR พร้อมปุ่มแจ้งชำระเงิน
-      const payButton = new ButtonBuilder()
-        .setCustomId(`user_paid_${user.id}_${product}`)
-        .setLabel('📤 แจ้งชำระเงิน')
-        .setStyle(ButtonStyle.Primary);
-
-      const message = `
-🧾 สั่งซื้อ: ${product.toUpperCase()}
-💰 ราคา: ${priceMap[product]} บาท
-📌 สแกน QR นี้เพื่อชำระเงิน:
+        const message = `\n
+╭───────────────
+│ 🧾 สั่งซื้อ: ${product.toUpperCase()}
+│ 💰 ราคา: ${priceMap[product]} บาท
+│ 📌 สแกน QR นี้เพื่อชำระเงิน:
+╰───────────────
 https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg`;
 
-      await interaction.reply({
-        content: message,
-        components: [new ActionRowBuilder().addComponents(payButton)],
-        flags: EPHEMERAL_FLAG,
-      });
-      return;
-    }
-
-    // กดแจ้งชำระเงินจาก user
-    if (interaction.isButton() && interaction.customId.startsWith('user_paid_')) {
-      const [_, userId, product] = interaction.customId.split('_');
-
-      // เช็ค user ว่ากดปุ่มตัวเองไหม
-      if (interaction.user.id !== userId) {
-        // ถ้ายังไม่เคยตอบ interaction นี้
-        if (!interaction.replied && !interaction.deferred) {
-          return interaction.reply({
-            content: '❌ คุณไม่สามารถแจ้งชำระเงินแทนคนอื่นได้',
-            flags: EPHEMERAL_FLAG,
-          });
-        } else {
-          return interaction.followUp({
-            content: '❌ คุณไม่สามารถแจ้งชำระเงินแทนคนอื่นได้',
-            flags: EPHEMERAL_FLAG,
-          });
-        }
-      }
-
-      // deferReply ก่อนทำงานหนัก
-      if (!interaction.deferred && !interaction.replied) {
-        await interaction.deferReply({ ephemeral: true });
-      }
-
-      await interaction.followUp({
-        content: '⏳ รอสักครู่ กำลังแจ้งแอดมิน...',
-        ephemeral: true,
-      });
-
-      // แจ้งแอดมินในช่อง ADMIN_CHANNEL_ID
-      const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-      const orderTime = new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
-
-      // ส่งปุ่มให้แอดมินกดยืนยัน / ยกเลิก
-      const approveBtn = new ButtonBuilder()
-        .setCustomId(`approve_${userId}_${product}`)
-        .setLabel('✅ ยืนยัน')
-        .setStyle(ButtonStyle.Success);
-
-      const rejectBtn = new ButtonBuilder()
-        .setCustomId(`reject_${userId}_${product}`)
-        .setLabel('❌ ยกเลิก')
-        .setStyle(ButtonStyle.Danger);
-
-      const adminRow = new ActionRowBuilder().addComponents(approveBtn, rejectBtn);
-
-      await adminChannel.send({
-        content: `📥 ผู้ใช้ <@${userId}> แจ้งชำระเงิน\n🛒 สินค้า: **${product.toUpperCase()}**\n💸 ราคา: **${priceMap[product]} บาท**\n🕒 เวลา: ${orderTime}`,
-        components: [adminRow],
-      });
-
-      return;
-    }
-
-    // แอดมินกดยืนยัน/ยกเลิก
-    if (interaction.isButton() && (interaction.customId.startsWith('approve_') || interaction.customId.startsWith('reject_'))) {
-      const [action, userId, product] = interaction.customId.split('_');
-      const guild = interaction.guild;
-      const member = await guild.members.fetch(userId);
-
-      // deferUpdate ก่อน (ตอบแบบเงียบ)
-      await interaction.deferUpdate();
-
-      if (action === 'approve') {
-        // ดึงคีย์จาก Google Sheets (คีย์ว่าง)
-        const res = await sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: 'Sheet1!A2:B',
-        });
-
-        const rows = res.data.values || [];
-        const available = rows.find(row => !row[1]); // หาแถวที่ช่อง B ว่าง = ยังไม่ใช้
-
-        if (!available) {
-          return interaction.followUp({
-            content: '❌ ไม่พบคีย์ว่างใน Google Sheets',
-            flags: EPHEMERAL_FLAG,
-          });
-        }
-
-        const key = available[0];
-        const rowIndex = rows.findIndex(r => r[0] === key) + 2;
-
-        // อัปเดต Google Sheets ว่าใช้โดย user นี้
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SHEET_ID,
-          range: `Sheet1!B${rowIndex}`,
-          valueInputOption: 'RAW',
-          requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
-        });
-
-        // เพิ่มยศ DONATOR ให้ user
-        await member.roles.add(DONATOR_ROLE_ID);
-
-        // ส่งคีย์กลับหา user ตรง interaction เดิม
-        await interaction.followUp({
-          content: `✅ <@${userId}> คีย์ของคุณ: \`${key}\`\nขอบคุณที่อุดหนุนค่ะ!`,
+        await interaction.reply({
+          content: message,
+          components: [new ActionRowBuilder().addComponents(payButton)],
           flags: EPHEMERAL_FLAG,
         });
-      } else if (action === 'reject') {
-        // ถามเหตุผลยกเลิก (แจ้ง admin ใน channel เดิม)
-        const filter = m => m.author.id === interaction.user.id;
+      }
+      // ปุ่มแจ้งชำระเงิน user
+      else if (interaction.customId.startsWith('user_paid_')) {
+        const [_, userId, product] = interaction.customId.split('_');
+
+        // เช็คว่าคนกดคือเจ้าของ interaction จริงๆ
+        if (interaction.user.id !== userId) {
+          try {
+            if (!interaction.replied && !interaction.deferred) {
+              await interaction.reply({
+                content: '❌ คุณไม่สามารถแจ้งชำระเงินแทนคนอื่นได้',
+                flags: EPHEMERAL_FLAG,
+              });
+            } else {
+              await interaction.followUp({
+                content: '❌ คุณไม่สามารถแจ้งชำระเงินแทนคนอื่นได้',
+                flags: EPHEMERAL_FLAG,
+              });
+            }
+          } catch (e) {
+            console.log('Ignored interaction error:', e.message);
+          }
+          return;
+        }
+
+        await interaction.deferReply({ flags: EPHEMERAL_FLAG });
+
+        // แจ้งลูกค้า
+        await interaction.editReply('⏳ รอสักครู่ กำลังแจ้งแอดมิน...');
+
+        // ส่งข้อมูลไปช่องแอดมิน
         const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
 
+        const orderInfo = `
+📥 ออเดอร์จาก <@${userId}>
+📦 สินค้า: **${product.toUpperCase()}**
+💸 ราคา: **${priceMap[product]} บาท**
+🕒 เวลาที่แจ้ง: ${new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+`;
+
+        const approveBtn = new ButtonBuilder()
+          .setCustomId(`approve_${userId}_${product}`)
+          .setLabel('✅ ยืนยัน')
+          .setStyle(ButtonStyle.Success);
+
+        const rejectBtn = new ButtonBuilder()
+          .setCustomId(`reject_${userId}_${product}`)
+          .setLabel('❌ ปฏิเสธ')
+          .setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder().addComponents(approveBtn, rejectBtn);
+
+        await adminChannel.send({ content: orderInfo, components: [row] });
+
         await interaction.followUp({
-          content: 'กรุณาพิมพ์เหตุผลการยกเลิกคำสั่งซื้อ (มีเวลา 2 นาที)',
+          content: '✅ แจ้งแอดมินเรียบร้อย รอการตรวจสอบ',
           flags: EPHEMERAL_FLAG,
         });
+      }
+      // ปุ่มแอดมินกดยืนยันหรือปฏิเสธ
+      else if (
+        interaction.customId.startsWith('approve_') ||
+        interaction.customId.startsWith('reject_')
+      ) {
+        const [action, userId, product] = interaction.customId.split('_');
+        const guild = interaction.guild;
+        const member = await guild.members.fetch(userId);
 
-        const collected = await adminChannel.awaitMessages({
-          filter,
-          max: 1,
-          time: 120000,
-        }).catch(() => null);
+        await interaction.deferUpdate();
 
-        const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
+        if (action === 'approve') {
+          // ดึงข้อมูล Google Sheet
+          const authClient = await auth.getClient();
+          const res = await sheets.spreadsheets.values.get({
+            spreadsheetId: SHEET_ID,
+            range: 'Sheet1!A2:B',
+          });
 
-        // แจ้ง user ว่าคำสั่งซื้อถูกยกเลิก
-        try {
-          await member.send(`❌ คำสั่งซื้อของคุณถูกยกเลิกด้วยเหตุผล: ${reason}`);
-        } catch {
-          // ถ้าส่ง DM ไม่ได้ก็ไม่เป็นไร
+          const rows = res.data.values || [];
+          const availableRow = rows.findIndex((row) => !row[1]);
+          if (availableRow === -1) {
+            await interaction.followUp({
+              content: '❌ ไม่มีคีย์ว่างในระบบ',
+              flags: EPHEMERAL_FLAG,
+            });
+            return;
+          }
+
+          const key = rows[availableRow][0];
+          const rowIndex = availableRow + 2;
+
+          // อัพเดตใน Sheet ว่าคีย์ถูกใช้โดย user นี้
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range: `Sheet1!B${rowIndex}`,
+            valueInputOption: 'RAW',
+            requestBody: { values: [[`ใช้โดย ${member.user.tag}`]] },
+          });
+
+          // ใส่ role donation ให้ user
+          await member.roles.add(DONATOR_ROLE_ID);
+
+          // ส่งคีย์กลับหาลูกค้า
+          try {
+            await interaction.followUp({
+              content: `✅ อนุมัติคำสั่งซื้อของคุณ <@${userId}> แล้วค่ะ\n🔑 คีย์ใช้งาน: \`${key}\``,
+              flags: EPHEMERAL_FLAG,
+            });
+
+            // ถ้าอยากส่งข้อความในช่องเดิมของ user ให้ใช้ DM แทน (ถ้าเปิดรับ)
+            // await member.send(`🔑 คีย์ใช้งาน: \`${key}\``);
+          } catch (e) {
+            console.error('ส่งข้อความคีย์ลูกค้าไม่สำเร็จ:', e);
+          }
+        } else if (action === 'reject') {
+          // รอแอดมินพิมพ์เหตุผลปฏิเสธ
+          const filter = (m) => m.author.id === interaction.user.id;
+          const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
+
+          await interaction.followUp({
+            content: 'กรุณาพิมพ์เหตุผลที่ปฏิเสธคำสั่งซื้อนี้ (ภายใน 2 นาที)',
+            flags: EPHEMERAL_FLAG,
+          });
+
+          try {
+            const collected = await adminChannel.awaitMessages({
+              filter,
+              max: 1,
+              time: 120000,
+              errors: ['time'],
+            });
+            const reason = collected.first().content || 'ไม่ระบุเหตุผล';
+
+            await interaction.followUp({
+              content: `❌ ปฏิเสธคำสั่งซื้อของ <@${userId}> ด้วยเหตุผล: ${reason}`,
+              flags: EPHEMERAL_FLAG,
+            });
+
+            // แจ้งลูกค้า
+            try {
+              await (await guild.members.fetch(userId)).send(
+                `❌ คำสั่งซื้อของคุณถูกปฏิเสธด้วยเหตุผล: ${reason}`
+              );
+            } catch {}
+
+          } catch {
+            await interaction.followUp({
+              content: '❌ หมดเวลาในการพิมพ์เหตุผล',
+              flags: EPHEMERAL_FLAG,
+            });
+          }
         }
-
-        await interaction.followUp({
-          content: `❌ คำสั่งซื้อของ <@${userId}> ถูกยกเลิกด้วยเหตุผล: ${reason}`,
-          flags: EPHEMERAL_FLAG,
-        });
       }
-
-      return;
     }
-  } catch (err) {
-    console.error('❌ Error handling interaction:', err);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          content: '❌ เกิดข้อผิดพลาดในการประมวลผลคำสั่ง',
-          flags: EPHEMERAL_FLAG,
-        });
-      }
-    } catch {}
+  } catch (error) {
+    console.error('❌ Error handling interaction:', error);
   }
 });
 
