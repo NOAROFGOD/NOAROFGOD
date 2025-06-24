@@ -11,7 +11,6 @@ const {
 } = require('discord.js');
 
 const { google } = require('googleapis');
-const { InteractionResponseFlags } = require('discord-api-types/v10');
 
 const client = new Client({
   intents: [
@@ -99,10 +98,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
                 .setColor('Red')
                 .setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ'),
             ],
-            flags: InteractionResponseFlags.Ephemeral,
+            ephemeral: true,
           });
 
-        await interaction.deferReply({ flags: InteractionResponseFlags.Ephemeral });
+        await interaction.deferReply({ ephemeral: true });
 
         const price = priceMap[product];
 
@@ -227,7 +226,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             embeds: [
               new EmbedBuilder().setColor('Red').setDescription('❌ ไม่พบคีย์ว่าง'),
             ],
-            flags: InteractionResponseFlags.Ephemeral,
+            ephemeral: true,
           });
 
         const key = available[0];
@@ -263,7 +262,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       } else if (action === 'reject') {
         await interaction.reply({
           content: 'ใส่เหตุผลที่ยกเลิก',
-          flags: InteractionResponseFlags.Ephemeral,
+          ephemeral: true,
         });
 
         const filter = (m) => m.author.id === interaction.user.id;
