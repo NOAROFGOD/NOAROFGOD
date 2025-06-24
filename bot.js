@@ -27,9 +27,9 @@ const priceMap = {
 
 const pendingOrders = new Map();
 
-const SHEET_ID = 'ใส่IDสเปรดชีตคุณ';
-const ADMIN_CHANNEL_ID = 'ใส่IDช่องหลังบ้าน';
-const DONATOR_ROLE_ID = 'ใส่IDโรลโดเนท';
+const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
+const ADMIN_CHANNEL_ID = '1386017253467619540';
+const DONATOR_ROLE_ID = '1386018737005658273';
 
 const auth = new google.auth.GoogleAuth({
   keyFile: 'noar-sserver-9c0924c3819f.json',
@@ -106,7 +106,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           .setLabel('📤 แจ้งชำระเงิน')
           .setStyle(ButtonStyle.Primary);
 
-        const message = `
+        const message = `\n
 ╭───────────────
 │ 🧾 สั่งซื้อ: ${product.toUpperCase()}
 │ 💰 ราคา: ${priceMap[product]} บาท
