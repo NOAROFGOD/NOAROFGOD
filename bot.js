@@ -84,8 +84,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.isStringSelectMenu()) {
       if (interaction.customId !== 'select_product') return;
-      // ไม่ใช้ deferUpdate() ที่นี่เพราะมันอาจทำให้ interaction หมดอายุเร็ว
-      // เปลี่ยนเป็น reply แบบ ephemeral เงียบๆ เลือกสินค้าแล้วจบ
       pendingOrders.set(interaction.user.id, interaction.values[0]);
       await interaction.reply({
         content: '✅ คุณเลือกสินค้าเรียบร้อยแล้ว',
@@ -108,14 +106,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
           });
         }
 
-        // สร้าง role ใหม่สำหรับ user
         const role = await guild.roles.create({
           name: `🛍️-${user.username}`,
           permissions: [PermissionsBitField.Flags.ViewChannel],
           reason: 'สร้างสำหรับคำสั่งซื้อ',
         });
 
-        // สร้าง channel ใหม่ใน category
         const channel = await guild.channels.create({
           name: `📁-order-${user.id}`,
           type: ChannelType.GuildText,
@@ -144,15 +140,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
           reason: 'ห้องสำหรับคำสั่งซื้อ',
         });
 
-        // ใส่ role ให้ user
         await guild.members.cache.get(user.id)?.roles.add(role);
 
-        // แจ้ง user ว่าสร้างห้องเสร็จแล้ว
         await interaction.editReply({
           content: `✅ สร้างห้อง <#${channel.id}> เรียบร้อยแล้ว`,
         });
 
-        // ส่ง embed รายละเอียดสินค้าในห้อง
         const productEmbed = new EmbedBuilder()
           .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
           .setDescription(`💰 ราคา: **${priceMap[product]} บาท**\n📌 โปรดสแกน QR ด้านล่าง แล้วแนบสลิปในห้องนี้ได้เลยค่ะ`)
@@ -161,61 +154,58 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         await channel.send({ content: `<@${user.id}>`, embeds: [productEmbed] });
 
-        // รอรับสลิปหลักฐานจาก user (รูปภาพ)
-        const filter = (m) =>
-          m.author.id === user.id &&
-          m.attachments.size > 0 &&
-          m.attachments.first().contentType?.startsWith('image/');
+        (async () => {
+          const filter = (m) =>
+            m.author.id === user.id &&
+            m.attachments.size > 0 &&
+            m.attachments.first().contentType?.startsWith('image/');
 
-        try {
-          const collected = await channel.awaitMessages({
-            filter,
-            max: 1,
-            time: 300000, // 5 นาที
-            errors: ['time'],
-          });
+          try {
+            const collected = await channel.awaitMessages({
+              filter,
+              max: 1,
+              time: 300000,
+              errors: ['time'],
+            });
 
-          const message = collected.first();
-          const slip = message.attachments.first();
+            const message = collected.first();
+            const slip = message.attachments.first();
 
-          await message.reply('✅ ส่งหลักฐานให้แอดมินแล้ว รอแอดตรวจสอบนะคะ');
+            await message.reply('✅ ส่งหลักฐานให้แอดมินแล้ว รอแอดตรวจสอบนะคะ');
 
-          const approveButton = new ButtonBuilder()
-            .setCustomId(`approve_order_${user.id}`)
-            .setLabel('✅ อนุมัติ')
-            .setStyle(ButtonStyle.Success);
+            const approveButton = new ButtonBuilder()
+              .setCustomId(`approve_order_${user.id}`)
+              .setLabel('✅ อนุมัติ')
+              .setStyle(ButtonStyle.Success);
 
-          const rejectButton = new ButtonBuilder()
-            .setCustomId(`reject_order_${user.id}`)
-            .setLabel('❌ ยกเลิก')
-            .setStyle(ButtonStyle.Danger);
+            const rejectButton = new ButtonBuilder()
+              .setCustomId(`reject_order_${user.id}`)
+              .setLabel('❌ ยกเลิก')
+              .setStyle(ButtonStyle.Danger);
 
-          const actionRow = new ActionRowBuilder().addComponents(approveButton, rejectButton);
+            const actionRow = new ActionRowBuilder().addComponents(approveButton, rejectButton);
 
-          const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-          await adminChannel.send({
-            content: `📥 ออเดอร์จาก <@${user.id}>\n📦 สินค้า: **${product.toUpperCase()}**\n💸 ราคา: **${priceMap[product]} บาท**\n🗂️ ห้อง: <#${channel.id}>`,
-            files: [slip],
-            components: [actionRow],
-          });
-        } catch {
-          await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่');
-          setTimeout(async () => {
-            // ลบ role และลบ channel หลังจากแจ้ง timeout แล้ว 5 วินาที
-            const roleToRemove = guild.roles.cache.find((r) => r.name === `🛍️-${user.username}`);
-            if (roleToRemove) await guild.members.cache.get(user.id)?.roles.remove(roleToRemove);
-            await channel.delete();
-          }, 5000);
-        }
+            const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
+            await adminChannel.send({
+              content: `📥 ออเดอร์จาก <@${user.id}>\n📦 สินค้า: **${product.toUpperCase()}**\n💸 ราคา: **${priceMap[product]} บาท**\n🗂️ ห้อง: <#${channel.id}>`,
+              files: [slip],
+              components: [actionRow],
+            });
+          } catch {
+            await channel.send('⏰ ไม่ได้รับหลักฐานใน 5 นาที กรุณาสั่งซื้อใหม่');
+            setTimeout(async () => {
+              const roleToRemove = guild.roles.cache.find((r) => r.name === `🛍️-${user.username}`);
+              if (roleToRemove) await guild.members.cache.get(user.id)?.roles.remove(roleToRemove);
+              await channel.delete();
+            }, 5000);
+          }
+        })();
       } else {
-        // Handle approve / reject buttons
         const [action, , userId] = interaction.customId.split('_');
         const guild = interaction.guild;
         if (action === 'approve') {
           const member = await guild.members.fetch(userId);
-          const orderChannel = guild.channels.cache.find(
-            (ch) => ch.name === `📁-order-${userId}`
-          );
+          const orderChannel = guild.channels.cache.find((ch) => ch.name === `📁-order-${userId}`);
 
           await interaction.deferUpdate();
 
