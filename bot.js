@@ -37,6 +37,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 const priceMap = { BetterFiveM: 49 };
 const pendingOrders = new Map();
+const EPHEMERAL_FLAG = 1 << 6; // 64
 
 client.once('ready', () => {
   console.log(`✅ บอทออนไลน์แล้ว: ${client.user.tag}`);
@@ -91,7 +92,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     // กดปุ่มสั่งซื้อ
     if (interaction.customId === 'confirm_order') {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
       const product = pendingOrders.get(interaction.user.id);
       if (!product) {
@@ -101,6 +102,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
               .setColor('Red')
               .setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ'),
           ],
+          flags: EPHEMERAL_FLAG,
         });
       }
 
@@ -118,6 +120,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.editReply({
         embeds: [productEmbed],
         components: [new ActionRowBuilder().addComponents(payConfirmButton)],
+        flags: EPHEMERAL_FLAG,
       });
       return;
     }
@@ -161,7 +164,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       } catch {
         return interaction.followUp({
           content: '⚠️ ไม่พบสมาชิกนี้แล้ว',
-          ephemeral: true,
+          flags: EPHEMERAL_FLAG,
         });
       }
 
@@ -175,7 +178,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (!available) {
         return interaction.followUp({
           content: '❌ ไม่พบคีย์ว่าง',
-          ephemeral: true,
+          flags: EPHEMERAL_FLAG,
         });
       }
 
@@ -202,19 +205,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       await interaction.followUp({
         content: `✅ อนุมัติคำสั่งซื้อของ <@${userId}> เรียบร้อย`,
-        ephemeral: true,
+        flags: EPHEMERAL_FLAG,
       });
       return;
     }
 
     // แอดมินกดยกเลิก
     if (interaction.customId.startsWith('reject_order_')) {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
       const userId = interaction.customId.split('_')[2];
       const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
 
-      await interaction.editReply({ content: '📩 โปรดพิมพ์เหตุผลที่ยกเลิกคำสั่งซื้อ' });
+      await interaction.editReply({ content: '📩 โปรดพิมพ์เหตุผลที่ยกเลิกคำสั่งซื้อ', flags: EPHEMERAL_FLAG });
 
       const filter = (m) => m.author.id === interaction.user.id;
       const collected = await adminChannel.awaitMessages({ filter, max: 1, time: 60000 }).catch(() => null);
@@ -227,7 +230,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       await interaction.followUp({
         content: `❌ แจ้งเหตุผลการยกเลิกไปยัง <@${userId}> เรียบร้อย`,
-        ephemeral: true,
+        flags: EPHEMERAL_FLAG,
       });
       return;
     }
