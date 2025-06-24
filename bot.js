@@ -67,7 +67,7 @@ client.on(Events.MessageCreate, async (msg) => {
 
   const embed = new EmbedBuilder()
     .setTitle('NOAR SHOP')
-    .setDescription('บอท24/7 ระบบอัตโนมัติ โปรดเลือกสินค้าที่คุณต้องการ')
+    .setDescription('บอทจำหน่ายคีย์อัตโนมัติ โปรดเลือกสินค้าที่คุณต้องการ')
     .setColor(0x00ae86)
     .setImage(PRODUCTS.betterfivem.image);
 
@@ -97,6 +97,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isStringSelectMenu()) {
     const selected = interaction.values[0];
     userSelections.set(interaction.user.id, selected);
+    await interaction.deferUpdate();  // <-- แก้ไขตรงนี้
     return;
   }
 
