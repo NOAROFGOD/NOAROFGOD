@@ -79,6 +79,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_product') {
       pendingOrders.set(interaction.user.id, interaction.values[0]);
+      await interaction.deferUpdate();
       return;
     }
 
@@ -110,9 +111,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
         parent: CATEGORY_ID,
         permissionOverwrites: [
           { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: role.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.ReadMessageHistory] },
-          { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AttachFiles, PermissionsBitField.Flags.ReadMessageHistory] }
-        ]
+          { id: role.id, allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.AttachFiles,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ] },
+          { id: client.user.id, allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+              PermissionsBitField.Flags.AttachFiles,
+              PermissionsBitField.Flags.ReadMessageHistory
+            ] }
+        ],
+        reason: 'สร้างห้องสำหรับคำสั่งซื้อ'
       });
 
       const member = await guild.members.fetch(user.id);
