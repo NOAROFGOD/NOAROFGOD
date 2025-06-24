@@ -2,7 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, EmbedBuilder,
   ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-const creds = require('./google-credentials.json'); // 👈 ไฟล์ JSON จาก Google
+const creds = require('./noar-sserver-9c0924c3819f.json.json'); // 👈 ไฟล์ JSON จาก Google
 
 // ======= ค่าคงที่ =======
 const PREFIX = '!';
