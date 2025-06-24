@@ -236,7 +236,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
           const embed = new EmbedBuilder()
             .setTitle('✅ อนุมัติคำสั่งซื้อ')
             .setDescription(
-              `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้วค่ะ\n🔑 คีย์ใช้งาน : \\`${key}\\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
+              `<@${userId}> คำสั่งซื้อของคุณได้รับการอนุมัติแล้วค่ะ\n🔑 คีย์ใช้งาน : \`${key}\`\n📌 จะปิดห้องใน 5 นาที กรุณาจดจำคีย์ไว้ให้ดี หากทำหาย ticket มาได้ครับ`
             )
             .setColor('Green');
 
