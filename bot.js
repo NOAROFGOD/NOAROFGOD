@@ -85,7 +85,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.customId !== 'select_product') return;
 
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      await interaction.reply({ content: '✅ เลือกสินค้าเรียบร้อย', flags: EPHEMERAL_FLAG });
+      
+      await interaction.deferUpdate();
 
     } else if (interaction.isButton()) {
       const [action, , userId] = interaction.customId.split('_');
