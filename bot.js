@@ -1,17 +1,14 @@
 const {
   Client,
   GatewayIntentBits,
-  Partials,
-  ChannelType,
-  PermissionsBitField,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
   Events,
+  Partials,
 } = require('discord.js');
-
 const { google } = require('googleapis');
 
 const client = new Client({
@@ -35,10 +32,7 @@ const auth = new google.auth.GoogleAuth({
 
 const sheets = google.sheets({ version: 'v4', auth });
 
-const priceMap = {
-  BetterFiveM: 49,
-};
-
+const priceMap = { BetterFiveM: 49 };
 const pendingOrders = new Map();
 const EPHEMERAL_FLAG = 1 << 6;
 
@@ -48,88 +42,76 @@ client.once('ready', () => {
 
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
-
   if (msg.content === '!createmenu') {
     const embed = new EmbedBuilder()
       .setTitle('🛍️ BlackPulse Shop')
-      .setDescription('เลือกสินค้าที่ท่านต้องการ แล้วกด "🛒 สั่งซื้อเลย"')
-      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385980365969293523/xxxx.gif')
-      .setColor(0x00ccff);
+      .setDescription('เลือกสินค้าที่ต้องการ แล้วกดสั่งซื้อ')
+      .setColor(0x00ccff)
+      .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385980365969293523/xxxx.gif');
 
     const select = new StringSelectMenuBuilder()
       .setCustomId('select_product')
       .setPlaceholder('📦 เลือกสินค้า')
-      .addOptions(
-        Object.keys(priceMap).map((key) => ({
-          label: key.toUpperCase(),
-          value: key,
-          description: `${priceMap[key]} บาท`,
-        }))
-      );
+      .addOptions(Object.entries(priceMap).map(([key, price]) => ({
+        label: key.toUpperCase(),
+        value: key,
+        description: `${price} บาท`
+      })));
 
-    const buyButton = new ButtonBuilder()
+    const button = new ButtonBuilder()
       .setCustomId('confirm_order')
       .setLabel('🛒 สั่งซื้อเลย')
       .setStyle(ButtonStyle.Primary);
 
     await msg.channel.send({
       embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(select), new ActionRowBuilder().addComponents(buyButton)],
+      components: [
+        new ActionRowBuilder().addComponents(select),
+        new ActionRowBuilder().addComponents(button),
+      ],
     });
   }
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
-    // เลือกสินค้า ไม่ตอบอะไรเลย (ไม่มี deferUpdate, reply)
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_product') {
       pendingOrders.set(interaction.user.id, interaction.values[0]);
-      return; // เงียบๆ
+      await interaction.deferUpdate(); // ไม่ตอบกลับใด ๆ เพื่อให้ interaction ไม่ error
     }
 
-    if (!interaction.isButton()) return;
+    else if (interaction.isButton() && interaction.customId === 'confirm_order') {
+      const user = interaction.user;
+      const product = pendingOrders.get(user.id);
 
-    if (interaction.customId === 'confirm_order') {
       await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
-      const product = pendingOrders.get(interaction.user.id);
       if (!product) {
         return await interaction.editReply({
           embeds: [new EmbedBuilder().setColor('Red').setDescription('❌ กรุณาเลือกสินค้าก่อนนะคะ')],
         });
       }
 
-      const productEmbed = new EmbedBuilder()
+      const embed = new EmbedBuilder()
         .setTitle(`🧾 สั่งซื้อ: ${product.toUpperCase()}`)
-        .setDescription(
-          `💰 ราคา: **${priceMap[product]} บาท**\n` +
-            '📌 โปรดสแกน QR ด้านล่างเพื่อชำระเงิน แล้วกดปุ่ม "📤 แจ้งชำระเงิน" ด้านล่าง'
-        )
+        .setDescription(`💰 ราคา: **${priceMap[product]} บาท**\n📌 โปรดสแกน QR ด้านล่างเพื่อชำระเงิน แล้วกดปุ่ม **"📤 แจ้งชำระเงิน"** ด้านล่าง`)
         .setImage('https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg')
         .setColor(0x00ff00);
 
-      const payConfirmButton = new ButtonBuilder()
-        .setCustomId(`user_paid_${interaction.user.id}_${product}`)
+      const payButton = new ButtonBuilder()
+        .setCustomId(`user_paid_${user.id}_${product}`)
         .setLabel('📤 แจ้งชำระเงิน')
         .setStyle(ButtonStyle.Primary);
 
-      return interaction.editReply({
-        embeds: [productEmbed],
-        components: [new ActionRowBuilder().addComponents(payConfirmButton)],
+      await interaction.editReply({
+        embeds: [embed],
+        components: [new ActionRowBuilder().addComponents(payButton)],
       });
     }
 
-    if (interaction.customId.startsWith('user_paid_')) {
+    else if (interaction.isButton() && interaction.customId.startsWith('user_paid_')) {
       await interaction.deferUpdate();
-
-      const [, , userId, product] = interaction.customId.split('_');
-      const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID).catch(() => null);
-      if (!adminChannel) {
-        return interaction.followUp({
-          content: '❌ ไม่พบช่องแอดมิน',
-          flags: EPHEMERAL_FLAG,
-        });
-      }
+      const [_, __, userId, product] = interaction.customId.split('_');
 
       const approveButton = new ButtonBuilder()
         .setCustomId(`approve_order_${userId}_${product}`)
@@ -137,34 +119,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
         .setStyle(ButtonStyle.Success);
 
       const rejectButton = new ButtonBuilder()
-        .setCustomId(`reject_order_${userId}_${product}`)
+        .setCustomId(`reject_order_${userId}`)
         .setLabel('❌ ยกเลิก')
         .setStyle(ButtonStyle.Danger);
 
-      const actionRow = new ActionRowBuilder().addComponents(approveButton, rejectButton);
-
+      const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
       await adminChannel.send({
         content: `📥 แจ้งชำระเงินจาก <@${userId}>\n📦 สินค้า: **${product.toUpperCase()}**\n💸 ราคา: **${priceMap[product]} บาท**`,
-        components: [actionRow],
+        components: [new ActionRowBuilder().addComponents(approveButton, rejectButton)],
       });
-      return;
     }
 
-    if (interaction.customId.startsWith('approve_order_')) {
+    else if (interaction.isButton() && interaction.customId.startsWith('approve_order_')) {
       await interaction.deferUpdate();
-
-      const [, , userId, product] = interaction.customId.split('_');
-      const guild = interaction.guild;
-
-      let member;
-      try {
-        member = await guild.members.fetch(userId);
-      } catch {
-        return interaction.followUp({
-          content: '⚠️ ไม่พบสมาชิกนี้แล้ว',
-          flags: EPHEMERAL_FLAG,
-        });
-      }
+      const [_, __, userId, product] = interaction.customId.split('_');
+      const member = await interaction.guild.members.fetch(userId);
 
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
@@ -173,6 +142,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const rows = res.data.values || [];
       const available = rows.find((row) => !row[1]);
+
       if (!available) {
         return interaction.followUp({
           content: '❌ ไม่พบคีย์ว่าง',
@@ -191,46 +161,36 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
 
       await member.roles.add(DONATOR_ROLE_ID);
-
       await member.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('✅ อนุมัติคำสั่งซื้อ')
-            .setDescription(`🔑 คีย์ของคุณ : \`${key}\`\n📌 ขอบคุณที่สนับสนุนค่ะ`)
-            .setColor('Green'),
-        ],
-      });
-
-      return interaction.followUp({
-        content: `✅ อนุมัติคำสั่งซื้อของ <@${userId}> เรียบร้อย`,
-        flags: EPHEMERAL_FLAG,
+        embeds: [new EmbedBuilder()
+          .setTitle('✅ อนุมัติคำสั่งซื้อ')
+          .setDescription(`🔑 คีย์ของคุณ : \`${key}\`\n📌 ขอบคุณที่สนับสนุนค่ะ`)
+          .setColor('Green')
+        ]
       });
     }
 
-    if (interaction.customId.startsWith('reject_order_')) {
-      await interaction.deferReply({ flags: EPHEMERAL_FLAG });
-
+    else if (interaction.isButton() && interaction.customId.startsWith('reject_order_')) {
+      await interaction.deferUpdate();
       const userId = interaction.customId.split('_')[2];
+
+      await interaction.followUp({
+        content: '📩 โปรดพิมพ์เหตุผลที่ยกเลิก',
+        flags: EPHEMERAL_FLAG,
+      });
+
       const adminChannel = await client.channels.fetch(ADMIN_CHANNEL_ID);
-
-      await interaction.editReply({ content: '📩 โปรดพิมพ์เหตุผลที่ยกเลิกคำสั่งซื้อ', flags: EPHEMERAL_FLAG });
-
       const filter = (m) => m.author.id === interaction.user.id;
-      const collected = await adminChannel.awaitMessages({ filter, max: 1, time: 60000 }).catch(() => null);
+
+      const collected = await adminChannel.awaitMessages({ filter, max: 1, time: 60000 }).catch(() => {});
       const reason = collected?.first()?.content || 'ไม่ระบุเหตุผล';
 
-      const member = await interaction.guild.members.fetch(userId).catch(() => null);
-      if (member) {
-        await member.send(`❌ คำสั่งซื้อของคุณถูกยกเลิก เนื่องจาก: ${reason}`);
-      }
-
-      return interaction.followUp({
-        content: `❌ แจ้งเหตุผลการยกเลิกไปยัง <@${userId}> เรียบร้อย`,
-        flags: EPHEMERAL_FLAG,
-      });
+      const member = await interaction.guild.members.fetch(userId);
+      await member.send(`❌ คำสั่งซื้อของคุณถูกยกเลิก เนื่องจาก: ${reason}`);
     }
+
   } catch (err) {
-    console.error('Error handling interaction:', err);
+    console.error('❌ Error:', err);
   }
 });
 
