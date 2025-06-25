@@ -8,9 +8,9 @@ const client = new Client({
 });
 
 // CONFIG
-const ADMIN_CHANNEL_ID = '1386017253467619540'; // 💬 แก้เป็นช่องแจ้งแอดมิน
-const ROLE_ID = '1386018737005658273'; // 🏷️ Role ที่จะเพิ่มให้ลูกค้า
-const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw'; // 📄 Spreadsheet ID ของ Google Sheet
+const ADMIN_CHANNEL_ID = '1386017253467619540'; // ช่องแจ้งแอดมิน
+const ROLE_ID = '1386018737005658273'; // Role ที่จะเพิ่มให้ลูกค้า
+const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw'; // Spreadsheet ID
 
 const PRODUCTS = {
   betterfivem: {
@@ -18,35 +18,38 @@ const PRODUCTS = {
     price: 49,
     description: 'BoostFPS + ค่าดำติดเครื่อง',
     emoji: '🚀',
-    image: 'https://cdn.discordapp.com/attachments/1384470774668197998/1387217235478581348/IMG_7845.jpg?ex=685c8a3a&is=685b38ba&hm=97ec6e554ccce5bfde42d2783ec00807677ad3ebdb9623a294e44f2c26fe197b&',
-    qr: 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg?ex=685bfe18&is=685aac98&hm=d1694cf36c2937e636ddc1ab09533d3b424e0cb9197a7280afdc901877bef0dd&'
+    image: 'https://cdn.discordapp.com/attachments/1384470774668197998/1387217235478581348/IMG_7845.jpg',
+    qr: 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg'
   }
 };
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'noar-sserver-9c0924c3819f.json',
+  keyFile: 'YOUR-CREDS-FILE.json',  // เปลี่ยนเป็นชื่อไฟล์ JSON ที่มีจริง
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
 const userSelections = new Map();
 
-// 🟩 ฟังก์ชันดึงคีย์จาก Google Sheet
+// ฟังก์ชันดึงคีย์จาก Google Sheet
 async function getAvailableKey(product) {
-  const client = await auth.getClient();
-  const sheets = google.sheets({ version: 'v4', auth: client });
+  const clientAuth = await auth.getClient();
+  const sheets = google.sheets({ version: 'v4', auth: clientAuth });
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'A2:C1000',
+    range: 'sheet1!A2:C1000',
   });
 
   const rows = res.data.values;
+  if (!rows || rows.length === 0) return null;
+
   const rowIndex = rows.findIndex(r => r[1] !== 'yes' && r[2] === product);
   if (rowIndex === -1) return null;
   const key = rows[rowIndex][0];
 
+  // อัปเดตสถานะเป็น used = yes
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `B${rowIndex + 2}`,
+    range: `keylogin!B${rowIndex + 2}`,
     valueInputOption: 'RAW',
     requestBody: { values: [['yes']] },
   });
@@ -54,7 +57,7 @@ async function getAvailableKey(product) {
   return key;
 }
 
-// 🔘 คำสั่ง !shop
+// คำสั่ง !shop
 client.on(Events.MessageCreate, async (msg) => {
   if (!msg.content.startsWith('!shop')) return;
 
@@ -90,14 +93,14 @@ client.on(Events.MessageCreate, async (msg) => {
   });
 });
 
-// 🎯 จัดการปุ่มและ dropdown
+// จัดการ interaction
 client.on(Events.InteractionCreate, async (interaction) => {
   const id = interaction.customId;
 
   if (interaction.isStringSelectMenu()) {
     const selected = interaction.values[0];
     userSelections.set(interaction.user.id, selected);
-    await interaction.deferUpdate();  // <-- แก้ไขตรงนี้
+    await interaction.deferUpdate();
     return;
   }
 
@@ -177,7 +180,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await member.send(`🔑 ขอบคุณสำหรับการสั่งซื้อ **${product.label}**\n\nคีย์ของคุณคือ:\n\`\`\`${key}\`\`\``).catch(console.error);
     await member.roles.add(ROLE_ID).catch(console.error);
 
-    return interaction.reply({ content: `✅ ส่งคีย์ให้ <@${userId}> เรียบร้อย`, ephemeral: true });
+    await interaction.reply({ content: `✅ ส่งคีย์ให้ <@${userId}> เรียบร้อย`, ephemeral: true });
+
+    // แจ้งแอดมินว่าส่งคีย์เรียบร้อย
+    await client.channels.cache.get(ADMIN_CHANNEL_ID).send(`✅ ส่งคีย์ **${key}** ให้ <@${userId}> เรียบร้อยแล้วค่ะ`);
+
+    return;
+  }
+
+  if (id.startsWith('admin_cancel_')) {
+    const userId = id.split('_')[2];
+    await interaction.deferUpdate();
+
+    const member = await interaction.guild.members.fetch(userId);
+    await member.send(`❌ การสั่งซื้อของคุณถูกยกเลิกโดยแอดมิน`).catch(console.error);
+
+    return interaction.followUp({ content: `🛑 ยกเลิกคำสั่งซื้อของ <@${userId}> เรียบร้อย`, ephemeral: true });
   }
 });
 
