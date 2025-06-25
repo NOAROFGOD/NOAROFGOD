@@ -24,7 +24,7 @@ const PRODUCTS = {
 };
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'YOUR-CREDS-FILE.json',
+  keyFile: 'noar-sserver-9c0924c3819f.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
