@@ -49,7 +49,7 @@ async function getAvailableKey(product) {
   // อัปเดตสถานะเป็น used = yes
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `keylogin!B${rowIndex + 2}`,
+    range: `sheet1!B${rowIndex + 2}`,
     valueInputOption: 'RAW',
     requestBody: { values: [['yes']] },
   });
