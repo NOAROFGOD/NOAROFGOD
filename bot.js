@@ -19,7 +19,7 @@ const PRODUCTS = {
     description: 'BoostFPS + ค่าดำติดเครื่อง',
     emoji: '🚀',
     image: 'https://cdn.discordapp.com/attachments/1384470774668197998/1387217235478581348/IMG_7845.jpg',
-    qr: 'https://cdn.discordapp.com/attachments/1384470774668197998/1385979608083595335/IMG_7844.jpg'
+    qr: 'https://cdn.discordapp.com/attachments/1387302298191138896/1387302629167861770/IMG_7844.jpg?ex=685cd9c1&is=685b8841&hm=ab2f30232646bd1720c2245f886169724e22c539459a1a94401fc8551acb53f5&'
   }
 };
 
