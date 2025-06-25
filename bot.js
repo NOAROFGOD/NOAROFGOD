@@ -24,7 +24,7 @@ const PRODUCTS = {
 };
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'YOUR-CREDS-FILE.json',  // เปลี่ยนเป็นชื่อไฟล์ JSON ที่มีจริง
+  keyFile: 'noar-sserver-9c0924c3819f.json',  // เปลี่ยนเป็นชื่อไฟล์ JSON ที่มีจริง
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
