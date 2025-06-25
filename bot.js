@@ -8,9 +8,9 @@ const client = new Client({
 });
 
 // CONFIG
-const ADMIN_CHANNEL_ID = '1386017253467619540'; // ช่องแจ้งแอดมิน
-const ROLE_ID = '1386018737005658273'; // Role ที่จะเพิ่มให้ลูกค้า
-const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw'; // Spreadsheet ID
+const ADMIN_CHANNEL_ID = '1386017253467619540';
+const ROLE_ID = '1386018737005658273';
+const SHEET_ID = '11bjYLOsXatoJhvyza6ikuvmbXW2IehaBqaHoO5meuYw';
 
 const PRODUCTS = {
   betterfivem: {
@@ -19,18 +19,18 @@ const PRODUCTS = {
     description: 'BoostFPS + ค่าดำติดเครื่อง',
     emoji: '🚀',
     image: 'https://cdn.discordapp.com/attachments/1384470774668197998/1387217235478581348/IMG_7845.jpg',
-    qr: 'https://cdn.discordapp.com/attachments/1387302298191138896/1387302629167861770/IMG_7844.jpg?ex=685cd9c1&is=685b8841&hm=ab2f30232646bd1720c2245f886169724e22c539459a1a94401fc8551acb53f5&'
+    qr: 'https://cdn.discordapp.com/attachments/1387302298191138896/1387302629167861770/IMG_7844.jpg'
   }
 };
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'noar-sserver-9c0924c3819f.json',  // เปลี่ยนเป็นชื่อไฟล์ JSON ที่มีจริง
+  keyFile: 'noar-sserver-9c0924c3819f.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
 const userSelections = new Map();
+const paidNotify = new Set();
 
-// ฟังก์ชันดึงคีย์จาก Google Sheet
 async function getAvailableKey(product) {
   const clientAuth = await auth.getClient();
   const sheets = google.sheets({ version: 'v4', auth: clientAuth });
@@ -46,7 +46,6 @@ async function getAvailableKey(product) {
   if (rowIndex === -1) return null;
   const key = rows[rowIndex][0];
 
-  // อัปเดตสถานะเป็น used = yes
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
     range: `sheet1!B${rowIndex + 2}`,
@@ -57,7 +56,6 @@ async function getAvailableKey(product) {
   return key;
 }
 
-// คำสั่ง !shop
 client.on(Events.MessageCreate, async (msg) => {
   if (!msg.content.startsWith('!shop')) return;
 
@@ -93,7 +91,6 @@ client.on(Events.MessageCreate, async (msg) => {
   });
 });
 
-// จัดการ interaction
 client.on(Events.InteractionCreate, async (interaction) => {
   const id = interaction.customId;
 
@@ -130,15 +127,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (id === 'confirm_pay') {
+    if (paidNotify.has(interaction.user.id)) {
+      return interaction.reply({ content: '⏳ คุณแจ้งโอนแล้ว กรุณารอแอดมินตรวจสอบนะคะ', ephemeral: true });
+    }
+    paidNotify.add(interaction.user.id);
+
     const productKey = userSelections.get(interaction.user.id);
     const product = PRODUCTS[productKey];
     if (!product) return interaction.reply({ content: '❌ ไม่พบข้อมูลสินค้า', ephemeral: true });
 
     const date = new Date();
-    date.setHours(date.getHours() + 7); // GMT+7
+    date.setHours(date.getHours() + 7);
     const paidAt = date.toLocaleString('th-TH', {
-      year: 'numeric', month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 
     const embed = new EmbedBuilder()
@@ -161,10 +162,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
       .setLabel('❌ ยกเลิก')
       .setStyle(ButtonStyle.Danger);
 
-    await client.channels.cache.get(ADMIN_CHANNEL_ID).send({
+    const adminMsg = await client.channels.cache.get(ADMIN_CHANNEL_ID).send({
       embeds: [embed],
       components: [new ActionRowBuilder().addComponents(confirm, cancel)]
     });
+    userSelections.set(`${interaction.user.id}_msg`, adminMsg.id);
 
     return interaction.reply({ content: '📤 แจ้งชำระแล้ว รอแอดมินตรวจสอบนะคะ', ephemeral: true });
   }
@@ -177,14 +179,27 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!key) return interaction.reply({ content: '❌ ไม่พบคีย์ในระบบ', ephemeral: true });
 
     const member = await interaction.guild.members.fetch(userId);
-    await member.send(`🔑 ขอบคุณสำหรับการสั่งซื้อ **${product.label}**\n\nคีย์ของคุณคือ:\n\`\`\`${key}\`\`\``).catch(console.error);
+    await member.send(`🔑 ขอบคุณสำหรับการสั่งซื้อ **${product.label}**\n\nคีย์ของคุณคือ:\n\\`\`\`${key}\\`\`\``).catch(console.error);
     await member.roles.add(ROLE_ID).catch(console.error);
-
     await interaction.reply({ content: `✅ ส่งคีย์ให้ <@${userId}> เรียบร้อย`, ephemeral: true });
 
-    // แจ้งแอดมินว่าส่งคีย์เรียบร้อย
-    await client.channels.cache.get(ADMIN_CHANNEL_ID).send(`✅ ส่งคีย์ **${key}** ให้ <@${userId}> เรียบร้อยแล้วค่ะ`);
+    const msgId = userSelections.get(`${userId}_msg`);
+    if (msgId) {
+      const msg = await interaction.channel.messages.fetch(msgId).catch(() => null);
+      if (msg) {
+        const updatedButtons = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('done')
+            .setLabel('✅ ดำเนินการแล้ว')
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(true)
+        );
+        await msg.edit({ components: [updatedButtons] });
+      }
+    }
 
+    userSelections.delete(`${userId}_msg`);
+    paidNotify.delete(userId);
     return;
   }
 
@@ -192,10 +207,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const userId = id.split('_')[2];
     await interaction.deferUpdate();
 
+    const msgId = userSelections.get(`${userId}_msg`);
+    if (msgId) {
+      const msg = await interaction.channel.messages.fetch(msgId).catch(() => null);
+      if (msg) await msg.delete().catch(() => {});
+    }
+
     const member = await interaction.guild.members.fetch(userId);
     await member.send(`❌ การสั่งซื้อของคุณถูกยกเลิกโดยแอดมิน`).catch(console.error);
 
-    return interaction.followUp({ content: `🛑 ยกเลิกคำสั่งซื้อของ <@${userId}> เรียบร้อย`, ephemeral: true });
+    userSelections.delete(`${userId}_msg`);
+    paidNotify.delete(userId);
   }
 });
 
