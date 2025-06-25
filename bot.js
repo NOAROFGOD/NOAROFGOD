@@ -118,7 +118,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     const embed = new EmbedBuilder()
       .setTitle(`🔔 ชำระเงินสำหรับ ${product.label}`)
-      .setDescription(`📌 ยอดที่ต้องชำระ: **${product.price} บาท**\n\nสแกน QR ด้านล่าง แล้วกดปุ่ม "แจ้งชำระเงินสำเร็จ"`)
+      .setDescription(`📌 ยอดที่ต้องชำระ: **${product.price} บาท**\n\nสแกน QR ด้านล่าง แล้วกดปุ่ม \"แจ้งชำระเงินสำเร็จ\"`)
       .setImage(product.qr)
       .setColor(0x2ecc71);
 
@@ -187,7 +187,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!key) return interaction.reply({ content: '❌ ไม่พบคีย์ในระบบ', ephemeral: true });
 
     const member = await interaction.guild.members.fetch(userId);
-    await member.send(`🔑 ขอบคุณสำหรับการสั่งซื้อ **${product.label}**\n\nคีย์ของคุณคือ:\n\\`\`\`${key}\\`\`\``).catch(console.error);
+    await member.send(`🔑 ขอบคุณสำหรับการสั่งซื้อ **${product.label}**\n\nคีย์ของคุณคือ:\n\`\`\`${key}\`\`\``).catch(console.error);
     await member.roles.add(ROLE_ID).catch(console.error);
     await interaction.reply({ content: `✅ ส่งคีย์ให้ <@${userId}> เรียบร้อย`, ephemeral: true });
 
