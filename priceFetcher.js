@@ -10,10 +10,18 @@ function chunk(arr, size) {
   return out;
 }
 
+// ✅ sleep function
+function sleep(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+
 async function fetchPrices(items) {
   const cacheKey = "market_prices";
   const cached = getCache(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    console.log("⚡ Using cache");
+    return cached;
+  }
 
   const chunks = chunk(items, config.CHUNK_SIZE);
   let all = [];
@@ -21,14 +29,30 @@ async function fetchPrices(items) {
   for (let i = 0; i < chunks.length; i++) {
     const part = chunks[i];
 
-    const url = `https://east.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${config.CITIES.join(",")}`;
+    const url = `https://west.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${config.CITIES.join(",")}`;
 
     try {
       const res = await axios.get(url);
       all = all.concat(res.data);
-      console.log(`Fetched chunk ${i + 1}/${chunks.length}`);
+
+      console.log(`✅ Chunk ${i + 1}/${chunks.length}`);
+
+      // 🔥 delay ปกติ
+      await sleep(config.REQUEST_DELAY);
+
     } catch (err) {
-      console.log("API error:", err.message);
+
+      // 🔥 ถ้าโดน 429 → retry
+      if (err.response && err.response.status === 429) {
+        console.log(`⛔ 429 Rate Limit → retry chunk ${i + 1}`);
+
+        await sleep(config.RETRY_DELAY);
+        i--; // ยิงซ้ำ chunk เดิม
+        continue;
+      }
+
+      console.log("❌ API error:", err.message);
+      await sleep(1000);
     }
   }
 
