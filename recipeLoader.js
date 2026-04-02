@@ -8,9 +8,7 @@ function isGoodItem(item) {
     item.includes("STEAK") ||
     item.includes("OMELETTE") ||
     item.includes("SALAD") ||
-
     item.includes("POTION") ||
-
     item.includes("PLANK") ||
     item.includes("BAR") ||
     item.includes("CLOTH") ||
@@ -31,10 +29,15 @@ async function loadRecipes() {
     if (!obj || typeof obj !== "object") return;
 
     if (obj.craftingrequirements) {
+
       const item = obj.$?.uniquename;
 
       if (!item) return;
       if (!item.startsWith("T")) return;
+
+      // 🔥 ตัดของกาก
+      if (item.startsWith("T2") || item.startsWith("T3")) return;
+
       if (!isGoodItem(item)) return;
 
       let resources = obj.craftingrequirements.craftresource;
