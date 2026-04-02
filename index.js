@@ -7,13 +7,10 @@ async function main() {
   console.log("1. Load recipes...");
   const recipes = await loadRecipes();
 
-  // =====================
-  // 🔥 สร้าง item list ใหม่ (โคตรสำคัญ)
-  // =====================
+  // 🔥 เอาเฉพาะของที่ใช้จริง
   const itemSet = new Set();
 
   for (let r of recipes) {
-
     itemSet.add(r.item);
 
     for (let m of r.materials) {
@@ -25,17 +22,11 @@ async function main() {
 
   console.log("Items for API:", items.length);
 
-  // =====================
-  // 🔥 Fetch ราคา (เบาลงเยอะ)
-  // =====================
   console.log("2. Fetch market prices...");
   const prices = await fetchPrices(items);
 
   console.log("Total price entries:", prices.length);
 
-  // =====================
-  // 🔥 คำนวณกำไร
-  // =====================
   console.log("3. Calculate craft profit...");
   const crafts = calculateCraftProfit(prices, recipes);
 
