@@ -21,7 +21,11 @@ function calculateCraftProfit(prices, recipes) {
     const fixedItem = fixItemName(r.item);
     const sellPrice = priceMap[fixedItem]?.buy;
 
-    if (!sellPrice || sellPrice <= 0) continue;
+    // 🔥 DEBUG
+    if (!sellPrice) {
+      // console.log("❌ Missing item:", fixedItem);
+      continue;
+    }
 
     let cost = 0;
     let valid = true;
@@ -31,7 +35,8 @@ function calculateCraftProfit(prices, recipes) {
       const fixedMat = fixItemName(mat.item);
       const matPrice = priceMap[fixedMat]?.sell;
 
-      if (!matPrice || matPrice <= 0) {
+      if (!matPrice) {
+        // console.log("❌ Missing mat:", fixedMat);
         valid = false;
         break;
       }
