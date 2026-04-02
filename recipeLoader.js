@@ -2,8 +2,7 @@ const fs = require("fs");
 const path = require("path");
 
 function loadRecipes() {
-  const filePath = path.resolve(__dirname, "data/items.json");
-
+  const filePath = path.resolve(__dirname, "items.json");
   const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
   const recipes = [];
@@ -11,25 +10,38 @@ function loadRecipes() {
   function walk(obj) {
     if (Array.isArray(obj)) {
       obj.forEach(walk);
-    } else if (typeof obj === "object" && obj !== null) {
+      return;
+    }
 
-      // 🔥 ตัวนี้คือ key สำคัญ
-      if (obj["@craftingrequirements"]) {
+    if (typeof obj === "object" && obj !== null) {
 
-        const item = obj["@uniquename"] || obj["@id"];
-        const mats = [];
+      // 🔥 รองรับได้หลาย key (กัน dataset ต่างเวอร์ชัน)
+      const req =
+        obj["@craftingrequirements"] ||
+        obj["craftingrequirements"] ||
+        obj["CraftingRequirements"];
 
-        for (let mat of obj["@craftingrequirements"]) {
-          mats.push({
-            item: mat["@item"],
-            amount: parseInt(mat["@count"])
+      if (req && Array.isArray(req)) {
+        const item =
+          obj["@uniquename"] ||
+          obj["@id"] ||
+          obj["UniqueName"] ||
+          obj["Id"];
+
+        const materials = [];
+
+        for (let m of req) {
+          materials.push({
+            item: m["@item"] || m["Item"] || m["item"],
+            amount: parseInt(
+              m["@count"] || m["Count"] || m["count"] || 1
+            )
           });
         }
 
-        recipes.push({
-          item,
-          materials: mats
-        });
+        if (item && materials.length > 0) {
+          recipes.push({ item, materials });
+        }
       }
 
       for (let key in obj) {
@@ -41,6 +53,11 @@ function loadRecipes() {
   walk(raw);
 
   console.log("📦 Loaded recipes:", recipes.length);
+
+  // debug ตัวแรก
+  if (recipes[0]) {
+    console.log("🧪 Sample recipe:", recipes[0]);
+  }
 
   return recipes;
 }
