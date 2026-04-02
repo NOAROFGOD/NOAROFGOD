@@ -1,75 +1,48 @@
-const config = require("./config");
-const { fixItemName } = require("./itemFixer");
+for (let r of recipes) {
 
-function calculateCraftProfit(prices, recipes) {
+  const fixedItem = fixItemName(r.item);
+  const sellPrice = priceMap[fixedItem]?.buy;
 
-  const priceMap = {};
-
-  for (let e of prices) {
-    if (!priceMap[e.item_id]) {
-      priceMap[e.item_id] = {
-        buy: e.buy_price_max,
-        sell: e.sell_price_min
-      };
-    }
+  if (!sellPrice || sellPrice <= 0) {
+    console.log("❌ NO SELL PRICE:", fixedItem);
+    continue;
   }
 
-  const results = [];
+  let cost = 0;
+  let valid = true;
 
-  for (let r of recipes) {
+  for (let mat of r.materials) {
 
-    const fixedItem = fixItemName(r.item);
-    const sellPrice = priceMap[fixedItem]?.buy;
+    const fixedMat = fixItemName(mat.item);
+    const matPrice = priceMap[fixedMat]?.sell;
 
-    // 🔥 DEBUG
-    if (!sellPrice) {
-      // console.log("❌ Missing item:", fixedItem);
-      continue;
+    if (!matPrice || matPrice <= 0) {
+      console.log("❌ NO MAT PRICE:", fixedMat);
+      valid = false;
+      break;
     }
 
-    let cost = 0;
-    let valid = true;
-
-    for (let mat of r.materials) {
-
-      const fixedMat = fixItemName(mat.item);
-      const matPrice = priceMap[fixedMat]?.sell;
-
-      if (!matPrice) {
-        // console.log("❌ Missing mat:", fixedMat);
-        valid = false;
-        break;
-      }
-
-      cost += matPrice * mat.amount;
-    }
-
-    if (!valid || cost <= 0) continue;
-    if (cost < 100) continue;
-
-    const profit = Math.floor(
-      sellPrice * (1 - config.TAX) - cost
-    );
-
-    const percent = (profit / cost) * 100;
-
-    if (profit < config.MIN_PROFIT) continue;
-    if (percent < config.MIN_PERCENT) continue;
-
-    results.push({
-      item: fixedItem,
-      cost,
-      sell: sellPrice,
-      profit,
-      percent: percent.toFixed(1) + "%"
-    });
+    cost += matPrice * mat.amount;
   }
 
-  console.log("Total craft results:", results.length);
+  if (!valid) continue;
 
-  return results
-    .sort((a,b)=>b.profit-a.profit)
-    .slice(0, config.TOP_N);
+  if (cost < 100) continue;
+
+  const profit = Math.floor(
+    sellPrice * (1 - config.TAX) - cost
+  );
+
+  const percent = (profit / cost) * 100;
+
+  if (profit < config.MIN_PROFIT) continue;
+  if (percent < config.MIN_PERCENT) continue;
+
+  results.push({
+    item: fixedItem,
+    cost,
+    sell: sellPrice,
+    profit,
+    percent: percent.toFixed(1) + "%"
+  });
 }
-
-module.exports = { calculateCraftProfit };
