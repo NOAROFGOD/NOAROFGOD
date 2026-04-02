@@ -1,14 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 
-// 🔍 ดึง @id ทั้งหมดแบบ recursive
 function extractIds(obj, result = []) {
   if (Array.isArray(obj)) {
     obj.forEach(i => extractIds(i, result));
-  } 
-  else if (typeof obj === "object" && obj !== null) {
+  } else if (typeof obj === "object" && obj !== null) {
 
-    // ✅ filter id ที่ใช้ได้จริง
     if (
       obj["@id"] &&
       !obj["@hideindropdown"] &&
@@ -25,34 +22,19 @@ function extractIds(obj, result = []) {
   return result;
 }
 
-// 🚀 โหลดไฟล์ + สร้าง baseIds
 function generateBaseIds() {
   const filePath = path.resolve(__dirname, "items.json");
 
-  // ❌ กันพลาด
   if (!fs.existsSync(filePath)) {
-    console.error("❌ หา items.json ไม่เจอที่:", filePath);
+    console.error("❌ items.json not found:", filePath);
     process.exit(1);
   }
 
-  try {
-    const raw = JSON.parse(
-      fs.readFileSync(filePath, "utf-8")
-    );
+  const raw = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  const ids = [...new Set(extractIds(raw))];
 
-    const ids = extractIds(raw);
-
-    // 🔥 ลบซ้ำ
-    const unique = [...new Set(ids)];
-
-    console.log(`📦 Loaded base IDs: ${unique.length}`);
-
-    return unique;
-
-  } catch (err) {
-    console.error("❌ JSON parse error:", err.message);
-    process.exit(1);
-  }
+  console.log(`📦 Loaded base IDs: ${ids.length}`);
+  return ids;
 }
 
 module.exports = { generateBaseIds };
