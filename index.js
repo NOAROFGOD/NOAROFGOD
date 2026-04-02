@@ -8,6 +8,7 @@ const { calculateCraftProfit } = require("./craftCalculator");
 const config = require("./config");
 
 async function main() {
+
   console.log("1. Generate base IDs...");
   const baseIds = generateBaseIds();
   console.log("Total base IDs:", baseIds.length);
