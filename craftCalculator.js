@@ -1,64 +1,82 @@
-const config = require("./config");
+const fs = require("fs");
+const path = require("path");
+const xml2js = require("xml2js");
 
-function calculateCraftProfit(prices, recipes) {
+function isGoodItem(item) {
+  return (
+    item.includes("SOUP") ||
+    item.includes("STEAK") ||
+    item.includes("OMELETTE") ||
+    item.includes("SALAD") ||
 
-  const priceMap = {};
+    item.includes("POTION") ||
 
-  for (let e of prices) {
-    if (!priceMap[e.item_id]) {
-      priceMap[e.item_id] = {
-        buy: e.buy_price_max,
-        sell: e.sell_price_min
-      };
-    }
-  }
-
-  const results = [];
-
-  for (let r of recipes) {
-
-    const sellPrice = priceMap[r.item]?.buy;
-    if (!sellPrice || sellPrice <= 0) continue;
-
-    let cost = 0;
-    let valid = true;
-
-    for (let mat of r.materials) {
-      const matPrice = priceMap[mat.item]?.sell;
-
-      if (!matPrice || matPrice <= 0) {
-        valid = false;
-        break;
-      }
-
-      cost += matPrice * mat.amount;
-    }
-
-    if (!valid) continue;
-    if (cost < 100) continue; // กันของกาก
-
-    const profit = Math.floor(
-      sellPrice * (1 - config.TAX) - cost
-    );
-
-    if (profit < 300) continue;
-
-    const percent = ((profit / cost) * 100).toFixed(1);
-
-    results.push({
-      item: r.item,
-      cost,
-      sell: sellPrice,
-      profit,
-      percent: percent + "%"
-    });
-  }
-
-  console.log("Total craft results:", results.length);
-
-  return results
-    .sort((a,b)=>b.profit-a.profit)
-    .slice(0, config.TOP_N);
+    item.includes("PLANK") ||
+    item.includes("BAR") ||
+    item.includes("CLOTH") ||
+    item.includes("LEATHER")
+  );
 }
 
-module.exports = { calculateCraftProfit };
+async function loadRecipes() {
+  const filePath = path.resolve(__dirname, "items.xml");
+  const xml = fs.readFileSync(filePath, "utf-8");
+
+  const parser = new xml2js.Parser({ explicitArray: false });
+  const data = await parser.parseStringPromise(xml);
+
+  const recipes = [];
+
+  function walk(obj) {
+    if (!obj || typeof obj !== "object") return;
+
+    if (obj.craftingrequirements) {
+
+      const item = obj.$?.uniquename;
+      if (!item || !item.startsWith("T")) return;
+      if (!isGoodItem(item)) return;
+
+      let resources = obj.craftingrequirements.craftresource;
+
+      if (resources && !Array.isArray(resources)) {
+        resources = [resources];
+      }
+
+      const materials = [];
+
+      if (resources) {
+        for (let r of resources) {
+          const matName = r.$?.uniquename;
+          const count = parseInt(r.$?.count || 1);
+
+          if (matName) {
+            materials.push({
+              item: matName,
+              amount: count
+            });
+          }
+        }
+      }
+
+      if (materials.length > 0) {
+        recipes.push({
+          item,
+          materials
+        });
+      }
+    }
+
+    for (let key in obj) {
+      walk(obj[key]);
+    }
+  }
+
+  walk(data);
+
+  console.log("📦 Loaded recipes:", recipes.length);
+  console.log("🧪 Sample:", recipes[0]);
+
+  return recipes;
+}
+
+module.exports = { loadRecipes };
