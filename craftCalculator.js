@@ -4,12 +4,11 @@ function calculateCraftProfit(prices, recipes) {
 
   const priceMap = {};
 
-  // map ราคา
   for (let e of prices) {
     if (!priceMap[e.item_id]) {
       priceMap[e.item_id] = {
-        buy: e.buy_price_max,   // ราคาที่เราขายได้
-        sell: e.sell_price_min  // ราคาที่เราซื้อวัตถุดิบ
+        buy: e.buy_price_max,
+        sell: e.sell_price_min
       };
     }
   }
@@ -35,13 +34,14 @@ function calculateCraftProfit(prices, recipes) {
       cost += matPrice * mat.amount;
     }
 
-    if (!valid || cost <= 0) continue;
+    if (!valid) continue;
+    if (cost < 100) continue; // กันของกาก
 
     const profit = Math.floor(
       sellPrice * (1 - config.TAX) - cost
     );
 
-    if (profit <= 0) continue;
+    if (profit < 300) continue;
 
     const percent = ((profit / cost) * 100).toFixed(1);
 
@@ -57,7 +57,7 @@ function calculateCraftProfit(prices, recipes) {
   console.log("Total craft results:", results.length);
 
   return results
-    .sort((a, b) => b.profit - a.profit)
+    .sort((a,b)=>b.profit-a.profit)
     .slice(0, config.TOP_N);
 }
 
