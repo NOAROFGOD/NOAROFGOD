@@ -5,7 +5,6 @@ function calculateCraftProfit(prices, recipes) {
 
   const priceMap = {};
 
-  // map ราคา
   for (let e of prices) {
     if (!priceMap[e.item_id]) {
       priceMap[e.item_id] = {
@@ -64,7 +63,7 @@ function calculateCraftProfit(prices, recipes) {
   console.log("Total craft results:", results.length);
 
   return results
-    .sort((a, b) => b.profit - a.profit)
+    .sort((a,b)=>b.profit-a.profit)
     .slice(0, config.TOP_N);
 }
 
