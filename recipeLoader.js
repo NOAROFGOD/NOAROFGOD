@@ -2,10 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const xml2js = require("xml2js");
 
-// 🔥 เลือกเฉพาะของทำเงินจริง
 function isGoodItem(item) {
-  if (!item || typeof item !== "string") return false;
-
   return (
     item.includes("SOUP") ||
     item.includes("STEAK") ||
@@ -33,9 +30,7 @@ async function loadRecipes() {
   function walk(obj) {
     if (!obj || typeof obj !== "object") return;
 
-    // 🔥 เจอ crafting
     if (obj.craftingrequirements) {
-
       const item = obj.$?.uniquename;
 
       if (!item) return;
@@ -44,7 +39,6 @@ async function loadRecipes() {
 
       let resources = obj.craftingrequirements.craftresource;
 
-      // 🔥 FIX: รองรับ object / array
       if (resources && !Array.isArray(resources)) {
         resources = [resources];
       }
@@ -53,7 +47,6 @@ async function loadRecipes() {
 
       if (resources) {
         for (let r of resources) {
-
           const matName = r.$?.uniquename;
           const count = parseInt(r.$?.count || 1);
 
@@ -74,7 +67,6 @@ async function loadRecipes() {
       }
     }
 
-    // 🔁 loop ลึก
     for (let key in obj) {
       walk(obj[key]);
     }
@@ -83,10 +75,7 @@ async function loadRecipes() {
   walk(data);
 
   console.log("📦 Loaded recipes:", recipes.length);
-
-  if (recipes[0]) {
-    console.log("🧪 Sample recipe:", recipes[0]);
-  }
+  console.log("🧪 Sample:", recipes[0]);
 
   return recipes;
 }
