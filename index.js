@@ -2,7 +2,6 @@ const { generateBaseIds } = require("./itemGenerator");
 const { generateAPIItems } = require("./mapping");
 const { fetchPrices } = require("./priceFetcher");
 
-// 🔥 ใช้ dataset
 const { loadRecipes } = require("./recipeLoader");
 const { calculateCraftProfit } = require("./craftCalculator");
 
@@ -22,7 +21,7 @@ async function main() {
   console.log("Total price entries:", prices.length);
 
   console.log("4. Load recipes...");
-  const recipes = loadRecipes();
+  const recipes = await loadRecipes();
 
   console.log("5. Calculate craft profit...");
   const crafts = calculateCraftProfit(prices, recipes);
