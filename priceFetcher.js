@@ -21,7 +21,7 @@ async function fetchPrices(items) {
   for (let i = 0; i < chunks.length; i++) {
     const part = chunks[i];
 
-    const url = `https://west.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${config.CITIES.join(",")}`;
+    const url = `https://east.albion-online-data.com/api/v2/stats/prices/${part.join(",")}?locations=${config.CITIES.join(",")}`;
 
     try {
       const res = await axios.get(url);
