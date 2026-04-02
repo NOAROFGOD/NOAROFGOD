@@ -1,20 +1,43 @@
 const config = require("./config");
+const axios = require("axios");
 
-// 🔥 แปลงชื่อไอเทมจริง + enchant
-function formatItem(itemId, nameMap) {
+// 🔥 cache กันยิง API ซ้ำ
+const nameCache = {};
+
+// 🔥 ดึงชื่อจริงจาก Albion API
+async function getItemName(itemId) {
+  const base = itemId.split("@")[0];
+
+  if (nameCache[base]) return nameCache[base];
+
+  try {
+    const url = `https://gameinfo.albiononline.com/api/gameinfo/items/${base}`;
+    const res = await axios.get(url);
+
+    const name = res.data.LocalizedNames["EN-US"];
+    nameCache[base] = name;
+
+    return name;
+  } catch (e) {
+    nameCache[base] = base;
+    return base;
+  }
+}
+
+// 🔥 format + enchant
+async function formatItem(itemId) {
   let enchant = "";
 
   if (itemId.includes("@")) {
     enchant = "." + itemId.split("@")[1];
   }
 
-  const base = itemId.split("@")[0];
-  const realName = nameMap?.[base] || base;
+  const name = await getItemName(itemId);
 
-  return realName + enchant;
+  return name + enchant;
 }
 
-function calculateFlip(data, nameMap) {
+async function calculateFlip(data) {
   const itemMap = {};
 
   // =====================
@@ -34,7 +57,6 @@ function calculateFlip(data, nameMap) {
   }
 
   const results = [];
-
   const now = Date.now();
   const MAX_AGE = 1000 * 60 * 60; // 1 ชม.
 
@@ -48,14 +70,10 @@ function calculateFlip(data, nameMap) {
       for (let b of prices) {
 
         if (a.city === b.city) continue;
-
-        // ❌ กันข้อมูลพัง
         if (a.sell <= 0 || b.buy <= 0) continue;
-
-        // ❌ กันราคาต่ำเกิน (ขยะ)
         if (a.sell < 1000 || b.buy < 1000) continue;
 
-        // ❌ กันข้อมูลเก่า
+        // กันข้อมูลเก่า
         if (a.sellDate) {
           const age = now - new Date(a.sellDate).getTime();
           if (age > MAX_AGE) continue;
@@ -67,14 +85,17 @@ function calculateFlip(data, nameMap) {
 
         if (profit <= config.MIN_PROFIT) continue;
 
-        // ❌ กันกำไรหลอกเว่อร์
+        // กันกำไรหลอก
         const ratio = b.buy / a.sell;
         if (ratio > 5) continue;
 
         const percent = ((profit / a.sell) * 100).toFixed(1);
 
+        // 🔥 แปลงชื่อจริงตรงนี้
+        const realName = await formatItem(item);
+
         results.push({
-          item: formatItem(item, nameMap), // 🔥 ใช้ชื่อจริง
+          item: realName,
           rawItem: item,
           route: `${a.city} → ${b.city}`,
           buy: a.sell,
