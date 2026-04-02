@@ -15,32 +15,46 @@ function loadRecipes() {
 
     if (typeof obj === "object" && obj !== null) {
 
-      // 🔥 รองรับได้หลาย key (กัน dataset ต่างเวอร์ชัน)
-      const req =
-        obj["@craftingrequirements"] ||
-        obj["craftingrequirements"] ||
-        obj["CraftingRequirements"];
+      // 🔥 รองรับโครง Albion จริง
+      const crafting =
+        obj.craftingrequirements ||
+        obj["@craftingrequirements"];
 
-      if (req && Array.isArray(req)) {
+      if (crafting) {
+
         const item =
+          obj.uniquename ||
           obj["@uniquename"] ||
-          obj["@id"] ||
-          obj["UniqueName"] ||
-          obj["Id"];
+          obj["@id"];
+
+        const resources =
+          crafting.craftresource ||
+          crafting["@craftresource"] ||
+          [];
 
         const materials = [];
 
-        for (let m of req) {
-          materials.push({
-            item: m["@item"] || m["Item"] || m["item"],
-            amount: parseInt(
-              m["@count"] || m["Count"] || m["count"] || 1
-            )
-          });
+        for (let r of resources) {
+          const matName =
+            r.uniquename ||
+            r["@uniquename"];
+
+          const count =
+            parseInt(r.count || r["@count"] || 1);
+
+          if (matName) {
+            materials.push({
+              item: matName,
+              amount: count
+            });
+          }
         }
 
         if (item && materials.length > 0) {
-          recipes.push({ item, materials });
+          recipes.push({
+            item,
+            materials
+          });
         }
       }
 
@@ -54,7 +68,6 @@ function loadRecipes() {
 
   console.log("📦 Loaded recipes:", recipes.length);
 
-  // debug ตัวแรก
   if (recipes[0]) {
     console.log("🧪 Sample recipe:", recipes[0]);
   }
