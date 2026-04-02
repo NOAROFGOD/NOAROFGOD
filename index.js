@@ -2,7 +2,6 @@ const { generateBaseIds } = require("./itemGenerator");
 const { generateAPIItems } = require("./mapping");
 const { fetchPrices } = require("./priceFetcher");
 const { calculateFlip } = require("./flipCalculator");
-const { buildItemNameMap } = require("./itemNameService"); // 👈 เพิ่ม
 const config = require("./config");
 
 async function main() {
