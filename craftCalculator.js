@@ -4,11 +4,12 @@ function calculateCraftProfit(prices, recipes) {
 
   const priceMap = {};
 
+  // map ราคา
   for (let e of prices) {
     if (!priceMap[e.item_id]) {
       priceMap[e.item_id] = {
-        buy: e.buy_price_max,
-        sell: e.sell_price_min
+        buy: e.buy_price_max,   // ราคาที่เราขายได้
+        sell: e.sell_price_min  // ราคาที่เราซื้อวัตถุดิบ
       };
     }
   }
@@ -17,27 +18,27 @@ function calculateCraftProfit(prices, recipes) {
 
   for (let r of recipes) {
 
-    const sell = priceMap[r.item]?.buy;
-    if (!sell) continue;
+    const sellPrice = priceMap[r.item]?.buy;
+    if (!sellPrice || sellPrice <= 0) continue;
 
     let cost = 0;
     let valid = true;
 
     for (let mat of r.materials) {
-      const p = priceMap[mat.item]?.sell;
+      const matPrice = priceMap[mat.item]?.sell;
 
-      if (!p) {
+      if (!matPrice || matPrice <= 0) {
         valid = false;
         break;
       }
 
-      cost += p * mat.amount;
+      cost += matPrice * mat.amount;
     }
 
-    if (!valid) continue;
+    if (!valid || cost <= 0) continue;
 
     const profit = Math.floor(
-      sell * (1 - config.TAX) - cost
+      sellPrice * (1 - config.TAX) - cost
     );
 
     if (profit <= 0) continue;
@@ -47,15 +48,17 @@ function calculateCraftProfit(prices, recipes) {
     results.push({
       item: r.item,
       cost,
-      sell,
+      sell: sellPrice,
       profit,
       percent: percent + "%"
     });
   }
 
+  console.log("Total craft results:", results.length);
+
   return results
-    .sort((a,b)=>b.profit-a.profit)
-    .slice(0, 20);
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, config.TOP_N);
 }
 
 module.exports = { calculateCraftProfit };
