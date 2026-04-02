@@ -1,7 +1,11 @@
 const { generateBaseIds } = require("./itemGenerator");
 const { generateAPIItems } = require("./mapping");
 const { fetchPrices } = require("./priceFetcher");
-const { calculateFlip } = require("./flipCalculator");
+
+// 🔥 ใช้ dataset
+const { loadRecipes } = require("./recipeLoader");
+const { calculateCraftProfit } = require("./craftCalculator");
+
 const config = require("./config");
 
 async function main() {
@@ -17,11 +21,14 @@ async function main() {
   const prices = await fetchPrices(items);
   console.log("Total price entries:", prices.length);
 
-  console.log("4. Calculate flips...");
-  const flips = await calculateFlip(prices);
+  console.log("4. Load recipes...");
+  const recipes = loadRecipes();
 
-  console.log("\n🔥 TOP FLIPS 🔥");
-  console.table(flips);
+  console.log("5. Calculate craft profit...");
+  const crafts = calculateCraftProfit(prices, recipes);
+
+  console.log("\n🔥 TOP CRAFT 🔥");
+  console.table(crafts);
 }
 
 main();
