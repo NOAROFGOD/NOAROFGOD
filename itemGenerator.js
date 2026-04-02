@@ -4,7 +4,7 @@ const path = require("path");
 function extractIds(obj, result = []) {
   if (Array.isArray(obj)) {
     obj.forEach(i => extractIds(i, result));
-  } else if (typeof obj === "object") {
+  } else if (typeof obj === "object" && obj !== null) {
     if (obj["@id"] && !obj["@hideindropdown"]) {
       result.push(obj["@id"]);
     }
@@ -15,14 +15,15 @@ function extractIds(obj, result = []) {
   return result;
 }
 
-function generateItems() {
+function generateBaseIds() {
   const raw = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "../data/items.json"))
+    fs.readFileSync(path.join(__dirname, "../data/items.json"), "utf-8")
   );
 
-  const baseIds = extractIds(raw);
+  const ids = extractIds(raw);
 
-  return baseIds;
+  // ลบซ้ำ
+  return [...new Set(ids)];
 }
 
-module.exports = { generateItems };
+module.exports = { generateBaseIds };
