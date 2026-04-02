@@ -4,9 +4,6 @@ module.exports = {
   MIN_PERCENT: 5,
   TOP_N: 20,
 
-  TIERS: [4,5,6,7,8],
-  ENCHANTS: [0,1,2,3,4],
-
   CITIES: [
     "Bridgewatch",
     "Martlock",
@@ -16,7 +13,8 @@ module.exports = {
     "Caerleon"
   ],
 
-  CHUNK_SIZE: 50,
+  // 🔥 ปรับใหม่ (เร็วขึ้น + ไม่โดน 429)
+  CHUNK_SIZE: 40,
   REQUEST_DELAY: 300,
   RETRY_DELAY: 2000
 };
