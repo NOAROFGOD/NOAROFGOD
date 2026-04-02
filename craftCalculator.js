@@ -1,82 +1,71 @@
-const fs = require("fs");
-const path = require("path");
-const xml2js = require("xml2js");
+const config = require("./config");
+const { fixItemName } = require("./itemFixer");
 
-function isGoodItem(item) {
-  return (
-    item.includes("SOUP") ||
-    item.includes("STEAK") ||
-    item.includes("OMELETTE") ||
-    item.includes("SALAD") ||
+function calculateCraftProfit(prices, recipes) {
 
-    item.includes("POTION") ||
+  const priceMap = {};
 
-    item.includes("PLANK") ||
-    item.includes("BAR") ||
-    item.includes("CLOTH") ||
-    item.includes("LEATHER")
-  );
-}
-
-async function loadRecipes() {
-  const filePath = path.resolve(__dirname, "items.xml");
-  const xml = fs.readFileSync(filePath, "utf-8");
-
-  const parser = new xml2js.Parser({ explicitArray: false });
-  const data = await parser.parseStringPromise(xml);
-
-  const recipes = [];
-
-  function walk(obj) {
-    if (!obj || typeof obj !== "object") return;
-
-    if (obj.craftingrequirements) {
-
-      const item = obj.$?.uniquename;
-      if (!item || !item.startsWith("T")) return;
-      if (!isGoodItem(item)) return;
-
-      let resources = obj.craftingrequirements.craftresource;
-
-      if (resources && !Array.isArray(resources)) {
-        resources = [resources];
-      }
-
-      const materials = [];
-
-      if (resources) {
-        for (let r of resources) {
-          const matName = r.$?.uniquename;
-          const count = parseInt(r.$?.count || 1);
-
-          if (matName) {
-            materials.push({
-              item: matName,
-              amount: count
-            });
-          }
-        }
-      }
-
-      if (materials.length > 0) {
-        recipes.push({
-          item,
-          materials
-        });
-      }
-    }
-
-    for (let key in obj) {
-      walk(obj[key]);
+  // map ราคา
+  for (let e of prices) {
+    if (!priceMap[e.item_id]) {
+      priceMap[e.item_id] = {
+        buy: e.buy_price_max,
+        sell: e.sell_price_min
+      };
     }
   }
 
-  walk(data);
+  const results = [];
 
-  console.log("📦 Loaded recipes:", recipes.length);
-  console.log("🧪 Sample:", recipes[0]);
+  for (let r of recipes) {
 
-  return recipes;
+    const fixedItem = fixItemName(r.item);
+    const sellPrice = priceMap[fixedItem]?.buy;
+
+    if (!sellPrice || sellPrice <= 0) continue;
+
+    let cost = 0;
+    let valid = true;
+
+    for (let mat of r.materials) {
+
+      const fixedMat = fixItemName(mat.item);
+      const matPrice = priceMap[fixedMat]?.sell;
+
+      if (!matPrice || matPrice <= 0) {
+        valid = false;
+        break;
+      }
+
+      cost += matPrice * mat.amount;
+    }
+
+    if (!valid || cost <= 0) continue;
+    if (cost < 100) continue;
+
+    const profit = Math.floor(
+      sellPrice * (1 - config.TAX) - cost
+    );
+
+    const percent = (profit / cost) * 100;
+
+    if (profit < config.MIN_PROFIT) continue;
+    if (percent < config.MIN_PERCENT) continue;
+
+    results.push({
+      item: fixedItem,
+      cost,
+      sell: sellPrice,
+      profit,
+      percent: percent.toFixed(1) + "%"
+    });
+  }
+
+  console.log("Total craft results:", results.length);
+
+  return results
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, config.TOP_N);
 }
 
-module.exports = { loadRecipes };
+module.exports = { calculateCraftProfit };
