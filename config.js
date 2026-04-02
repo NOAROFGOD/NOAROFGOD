@@ -12,6 +12,10 @@ module.exports = {
     "Fort Sterling",
     "Caerleon"
   ],
-  CHUNK_SIZE: 80,
+
+  // 🔥 แก้ตรงนี้
+  CHUNK_SIZE: 50,      
+  REQUEST_DELAY: 300,   
+  RETRY_DELAY: 2000,   
   CACHE_TTL: 120
 };
