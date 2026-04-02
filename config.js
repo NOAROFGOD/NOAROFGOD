@@ -13,7 +13,6 @@ module.exports = {
     "Caerleon"
   ],
 
-  // 🔥 ปรับใหม่ (เร็วขึ้น + ไม่โดน 429)
   CHUNK_SIZE: 40,
   REQUEST_DELAY: 300,
   RETRY_DELAY: 2000
