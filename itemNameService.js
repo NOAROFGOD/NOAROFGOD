@@ -1,54 +1,38 @@
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
 
-const CACHE_FILE = path.join(__dirname, "itemNamesCache.json");
+const cache = {};
 
-// โหลด cache
-function loadCache() {
-  if (fs.existsSync(CACHE_FILE)) {
-    return JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+// ดึงชื่อจริงจาก Albion API
+async function getItemName(itemId) {
+  const base = itemId.split("@")[0];
+
+  if (cache[base]) return cache[base];
+
+  try {
+    const url = `https://gameinfo.albiononline.com/api/gameinfo/items/${base}`;
+    const res = await axios.get(url);
+
+    const name = res.data.LocalizedNames["EN-US"];
+    cache[base] = name;
+
+    return name;
+  } catch (e) {
+    cache[base] = base;
+    return base;
   }
-  return {};
 }
 
-// บันทึก cache
-function saveCache(data) {
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(data, null, 2));
-}
+// format + enchant
+async function formatItem(itemId) {
+  let enchant = "";
 
-// ดึงชื่อจาก API
-async function buildItemNameMap(items) {
-  let cache = loadCache();
-
-  const missing = items
-    .map(i => i.split("@")[0]) // ตัด enchant
-    .filter(i => !cache[i]);
-
-  const uniqueMissing = [...new Set(missing)];
-
-  console.log(`🔍 Missing names: ${uniqueMissing.length}`);
-
-  for (let id of uniqueMissing) {
-    try {
-      const url = `https://gameinfo.albiononline.com/api/gameinfo/items/${id}`;
-      const res = await axios.get(url);
-
-      const name = res.data.LocalizedNames["EN-US"];
-      cache[id] = name;
-
-      console.log("✔", id, "→", name);
-
-    } catch (e) {
-      cache[id] = id; // fallback
-      console.log("❌ Not found:", id);
-    }
-
-    await new Promise(r => setTimeout(r, 200)); // กันโดน block
+  if (itemId.includes("@")) {
+    enchant = "." + itemId.split("@")[1];
   }
 
-  saveCache(cache);
-  return cache;
+  const name = await getItemName(itemId);
+
+  return name + enchant;
 }
 
-module.exports = { buildItemNameMap, loadCache };
+module.exports = { formatItem };
