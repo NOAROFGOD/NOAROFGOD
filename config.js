@@ -1,14 +1,11 @@
 module.exports = {
   TAX: 0.065,
-
-  // 🔥 ปรับใหม่
   MIN_PROFIT: 300,
   MIN_PERCENT: 5,
-
   TOP_N: 20,
 
-  TIERS: [4, 5, 6, 7, 8],
-  ENCHANTS: [0, 1, 2, 3, 4],
+  TIERS: [4,5,6,7,8],
+  ENCHANTS: [0,1,2,3,4],
 
   CITIES: [
     "Bridgewatch",
@@ -21,7 +18,5 @@ module.exports = {
 
   CHUNK_SIZE: 50,
   REQUEST_DELAY: 300,
-  RETRY_DELAY: 2000,
-
-  CACHE_TTL: 120
+  RETRY_DELAY: 2000
 };
