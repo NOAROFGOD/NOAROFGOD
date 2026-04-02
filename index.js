@@ -15,14 +15,14 @@ async function main() {
   const items = generateAPIItems(baseIds);
   console.log("Total API items:", items.length);
 
-  console.log("3. Fetch prices...");
+  console.log("3. Fetch market prices...");
   const prices = await fetchPrices(items);
   console.log("Total price entries:", prices.length);
 
   console.log("4. Load recipes...");
   const recipes = await loadRecipes();
 
-  console.log("5. Calculate craft...");
+  console.log("5. Calculate craft profit...");
   const crafts = calculateCraftProfit(prices, recipes);
 
   console.log("\n🔥 TOP CRAFT 🔥");
