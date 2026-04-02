@@ -1,11 +1,11 @@
 const config = require("./config");
 const axios = require("axios");
 
-// 🔥 cache ชื่อไอเทม
+// 🔥 cache ชื่อ
 const nameCache = {};
 
 // =====================
-// ดึงชื่อจริง
+// แปลชื่อจริง
 // =====================
 async function getItemName(itemId) {
   const base = itemId.split("@")[0];
@@ -21,6 +21,7 @@ async function getItemName(itemId) {
     nameCache[base] = name;
 
     return name;
+
   } catch {
     nameCache[base] = base;
     return base;
@@ -28,7 +29,7 @@ async function getItemName(itemId) {
 }
 
 // =====================
-// format + enchant
+// format ชื่อ + enchant
 // =====================
 async function formatItem(itemId) {
   let enchant = "";
@@ -38,37 +39,8 @@ async function formatItem(itemId) {
   }
 
   const name = await getItemName(itemId);
+
   return name + enchant;
-}
-
-// =====================
-// filter ของทำเงินจริง
-// =====================
-function isValidItem(item) {
-
-  // ❌ ตัด resource / ของขยะ
-  if (
-    item.includes("ROCK") ||
-    item.includes("HIDE") ||
-    item.includes("FIBER") ||
-    item.includes("ORE") ||
-    item.includes("WOOD") ||
-    item.includes("MILK") ||
-    item.includes("FOXGLOVE") ||
-    item.includes("PLANK") ||
-    item.includes("BAR") ||
-    item.includes("LEATHER")
-  ) return false;
-
-  // ✅ เอาแต่ gear
-  if (
-    item.includes("2H") ||
-    item.includes("ARMOR") ||
-    item.includes("CAPE") ||
-    item.includes("BAG")
-  ) return true;
-
-  return false;
 }
 
 // =====================
@@ -91,37 +63,28 @@ async function calculateFlip(data) {
     });
   }
 
-  const results = [];
+  const rawResults = [];
 
+  // =====================
+  // คำนวณกำไร
+  // =====================
   for (let item in map) {
-
-    // 🔥 filter item ตรงนี้
-    if (!isValidItem(item)) continue;
-
     for (let a of map[item]) {
       for (let b of map[item]) {
 
         if (a.city === b.city) continue;
         if (a.sell <= 0 || b.buy <= 0) continue;
-        if (a.sell < 1000) continue;
 
         const profit = Math.floor(
           b.buy * (1 - config.TAX) - a.sell
         );
 
-        // 🔥 debug
-        if (profit > 0) {
-          console.log("DEBUG:", item, profit);
-        }
-
         if (profit < config.MIN_PROFIT) continue;
 
         const percent = ((profit / a.sell) * 100).toFixed(1);
 
-        const realName = await formatItem(item);
-
-        results.push({
-          item: realName,
+        rawResults.push({
+          item,
           route: `${a.city} → ${b.city}`,
           buy: a.sell,
           sell: b.buy,
@@ -132,11 +95,32 @@ async function calculateFlip(data) {
     }
   }
 
-  console.log("Total results:", results.length);
-
-  return results
+  // =====================
+  // sort ก่อน
+  // =====================
+  const top = rawResults
     .sort((a,b)=>b.profit-a.profit)
     .slice(0, config.TOP_N);
+
+  // =====================
+  // 🔥 แปลชื่อเฉพาะ Top
+  // =====================
+  const final = [];
+
+  for (let r of top) {
+    const name = await formatItem(r.item);
+
+    final.push({
+      item: name,      // 👈 ชื่อจริง
+      route: r.route,
+      buy: r.buy,
+      sell: r.sell,
+      profit: r.profit,
+      percent: r.percent
+    });
+  }
+
+  return final;
 }
 
 module.exports = { calculateFlip };
