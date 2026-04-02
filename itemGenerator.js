@@ -16,13 +16,21 @@ function extractIds(obj, result = []) {
 }
 
 function generateBaseIds() {
+  // 👉 หาไฟล์ในโฟลเดอร์เดียวกัน
+  const filePath = path.resolve(__dirname, "items.json");
+
+  // 👉 กันพลาด
+  if (!fs.existsSync(filePath)) {
+    console.error("❌ หา items.json ไม่เจอที่:", filePath);
+    process.exit(1);
+  }
+
   const raw = JSON.parse(
-    fs.readFileSync(path.join(__dirname, "../data/items.json"), "utf-8")
+    fs.readFileSync(filePath, "utf-8")
   );
 
   const ids = extractIds(raw);
 
-  // ลบซ้ำ
   return [...new Set(ids)];
 }
 
