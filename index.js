@@ -14,12 +14,16 @@ const client = new line.Client(config);
 // ===== FIREBASE =====
 const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
-// 👇 แก้ปัญหา private key พัง
+// แก้ปัญหา private key
 serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
+
+// 👇 ต้องมีบรรทัดนี้
+const db = admin.firestore();
+
 // ===== WEBHOOK =====
 app.post('/webhook', line.middleware(config), async (req, res) => {
   await Promise.all(req.body.events.map(handleEvent));
@@ -37,14 +41,14 @@ async function handleEvent(event) {
     });
   }
 
-  if (event.type !== 'message') return;
+  if (event.type !== 'message' || event.message.type !== 'text') return;
 
   const text = event.message.text.trim();
 
   const userRef = db.collection('users').doc(userId);
   const userDoc = await userRef.get();
 
-  // ยังไม่ปลดล็อก = ตีว่าเป็น KEY
+  // ===== ยังไม่ปลดล็อก =====
   if (!userDoc.exists || !userDoc.data().active) {
     const keyRef = db.collection('keys').doc(text);
     const keyDoc = await keyRef.get();
@@ -72,13 +76,18 @@ async function handleEvent(event) {
     });
   }
 
-  // ใช้งานได้แล้ว
+  // ===== ใช้งานได้แล้ว =====
   if (text === 'signal') {
     return client.replyMessage(event.replyToken, {
       type: 'text',
       text: '📊 GOLD SIGNAL ...'
     });
   }
+
+  return client.replyMessage(event.replyToken, {
+    type: 'text',
+    text: 'พิมพ์: signal'
+  });
 }
 
 app.listen(process.env.PORT || 3000);
