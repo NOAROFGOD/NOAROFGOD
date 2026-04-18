@@ -12,11 +12,14 @@ const config = {
 const client = new line.Client(config);
 
 // ===== FIREBASE =====
-admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_KEY))
-});
-const db = admin.firestore();
+const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
+// 👇 แก้ปัญหา private key พัง
+serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 // ===== WEBHOOK =====
 app.post('/webhook', line.middleware(config), async (req, res) => {
   await Promise.all(req.body.events.map(handleEvent));
